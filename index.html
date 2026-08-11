@@ -45,7 +45,6 @@
     padding:0 16px;
   }
 
-  /* HEADER */
   header.top{
     background:var(--azul-oscuro);
     color:var(--blanco);
@@ -82,7 +81,6 @@
     text-transform:capitalize;
   }
 
-  /* CONNECTION BADGE */
   .conn-badge{
     position:absolute;
     top:18px;
@@ -104,7 +102,6 @@
   .conn-badge.offline .conn-dot{background:#E0A93F;}
   .conn-badge.offline{color:#F3DFAF;}
 
-  /* STATUS PILL (dentro del header) */
   .status-row{
     display:flex;
     align-items:center;
@@ -126,21 +123,31 @@
   }
   .status-row span{font-size:13px;color:#E4ECF3;font-weight:500;}
 
-  /* INDICADOR DE ESTADO ACTUAL (grande, arriba de los botones) */
   .estado-box{
     display:flex;
+    flex-direction:column;
     align-items:center;
     justify-content:center;
-    gap:10px;
+    gap:4px;
     padding:14px 16px;
     border-radius:var(--radius-md);
-    font-weight:700;
-    font-size:15px;
     margin-bottom:14px;
     border:2px solid transparent;
     transition:background .2s ease, border-color .2s ease, color .2s ease;
   }
+  .estado-box .estado-linea{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-weight:700;
+    font-size:15px;
+  }
   .estado-box .estado-emoji{font-size:18px;}
+  .estado-box .estado-verificacion{
+    font-size:11px;
+    font-weight:600;
+    opacity:0.85;
+  }
   .estado-box.trabajando{
     background:#E7F4EE;
     color:var(--verde-ingreso-dark);
@@ -151,8 +158,12 @@
     color:var(--rojo-egreso-dark);
     border-color:var(--rojo-egreso);
   }
+  .estado-box.cargando{
+    background:#EEF2F6;
+    color:var(--gris-texto);
+    border-color:var(--gris-borde);
+  }
 
-  /* MAIN BUTTONS */
   .punch-grid{
     display:grid;
     grid-template-columns:1fr 1fr;
@@ -180,7 +191,6 @@
   .punch-btn.egreso{
     background:linear-gradient(160deg,var(--rojo-egreso),var(--rojo-egreso-dark));
   }
-  /* El estado "disabled" siempre gana: botón gris plano, sin sombra, sin click */
   .punch-btn:disabled{
     background:var(--gris-disabled-bg) !important;
     color:var(--gris-disabled-txt) !important;
@@ -194,7 +204,6 @@
   .punch-btn .label{font-size:15px;font-weight:700;letter-spacing:.3px;}
   .punch-btn .sub{font-size:11px;opacity:.85;font-weight:500;}
 
-  /* CARDS */
   .card{
     background:var(--blanco);
     border-radius:var(--radius-lg);
@@ -217,7 +226,6 @@
     margin-bottom:14px;
   }
 
-  /* WEEKLY SUMMARY */
   .summary-main{
     display:flex;
     align-items:baseline;
@@ -269,7 +277,6 @@
     text-transform:uppercase;
   }
 
-  /* HISTORY */
   .history-item{
     display:flex;
     justify-content:space-between;
@@ -312,6 +319,7 @@
   }
   .sync-tag.synced{color:var(--verde-ingreso-dark);}
   .sync-tag.pending{color:var(--ambar);}
+  .sync-tag.conflict{color:var(--rojo-egreso-dark);}
   .empty-state{
     text-align:center;
     padding:28px 10px;
@@ -360,10 +368,8 @@
     transition:opacity .25s ease, transform .25s ease;
     pointer-events:none;
     z-index:100;
-    white-space:nowrap;
     max-width:90vw;
-    overflow:hidden;
-    text-overflow:ellipsis;
+    text-align:center;
     display:flex;
     align-items:center;
     gap:8px;
@@ -400,21 +406,24 @@
     </div>
   </header>
 
-  <div class="estado-box" id="estadoBox">
-    <span class="estado-emoji" id="estadoEmoji">🔴</span>
-    <span id="estadoTexto">Estado actual: Fuera del trabajo</span>
+  <div class="estado-box cargando" id="estadoBox">
+    <div class="estado-linea">
+      <span class="estado-emoji" id="estadoEmoji">⏳</span>
+      <span id="estadoTexto">Verificando estado con el servidor...</span>
+    </div>
+    <div class="estado-verificacion" id="estadoVerificacion">Consultando...</div>
   </div>
 
   <div class="punch-grid">
-    <button class="punch-btn ingreso" id="btnIngreso">
+    <button class="punch-btn ingreso" id="btnIngreso" disabled>
       <span class="icon">&#8594;</span>
       <span class="label">INGRESO</span>
-      <span class="sub" id="subIngreso">Marcar entrada</span>
+      <span class="sub" id="subIngreso">Verificando...</span>
     </button>
-    <button class="punch-btn egreso" id="btnEgreso">
+    <button class="punch-btn egreso" id="btnEgreso" disabled>
       <span class="icon">&#8592;</span>
       <span class="label">EGRESO</span>
-      <span class="sub" id="subEgreso">Marcar salida</span>
+      <span class="sub" id="subEgreso">Verificando...</span>
     </button>
   </div>
 
@@ -429,14 +438,14 @@
   </div>
 
   <div class="card">
-    <h2>Historial de la semana</h2>
+    <h2>Historial de la semana (este dispositivo)</h2>
     <div class="card-sub">Día, entrada, salida, horas calculadas y estado de sincronización</div>
     <div id="historyList"></div>
   </div>
 
   <div class="footer-actions">
     <button class="sync-btn" id="btnForceSync">Reintentar sincronización pendiente</button>
-    <button id="btnReset">Borrar todos los registros</button>
+    <button id="btnReset">Borrar historial local de este dispositivo</button>
   </div>
 </div>
 
@@ -446,15 +455,15 @@
 (function(){
   "use strict";
 
-  const STORAGE_KEY = "control_ingreso_egreso_marcas_v2";
-  // URL de tu Google Apps Script (Web App) desplegado con acceso "Cualquier usuario"
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbwsI91SVLrgUkHX0VCIXGlo0SnWbtdJ88k5DuBEF3Q7qJxofwbJGeOVW8yrp5IpNGC9rw/exec";
+  const STORAGE_KEY = "control_ingreso_egreso_marcas_v3";
+  // URL de tu Google Apps Script (Web App) - debe tener doPost CON VALIDACIÓN y doGet
+  // (ver el código de Apps Script que te paso junto con este archivo).
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbx6_e9pR5r45iuEOZ3Mn81F8EMyuvNMXU9YsW1ZkjNz61iCtsyQpmkBorOSdzGzAq2jxw/exec";
+  const POLL_INTERVAL_MS = 20000; // cada cuánto se consulta el estado real al servidor
 
   const DIAS = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
 
-  // ---------- Storage ----------
-  // "marcas" es la lista plana y cronológica de cada click de Ingreso/Egreso.
-  // Es la fuente de verdad para el estado actual (evita solapamientos).
+  // ---------- Storage local (historial propio de este dispositivo) ----------
   function loadMarcas(){
     try{
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -469,6 +478,13 @@
   }
 
   let marcas = loadMarcas();
+
+  // Estado autoritativo conocido del SERVIDOR (única fuente de verdad compartida
+  // entre todos los dispositivos). Se actualiza al sondear, y al marcar.
+  let ultimoEstadoServidor = null;      // { tipo, timestamp, fecha, horaOriginal, horaRedondeada } | null
+  let servidorVerificado = false;       // true si ya pudimos consultar el servidor con éxito al menos una vez
+  let ultimaVerificacionTs = null;      // Date de la última consulta exitosa
+  let botonesCargando = false;          // evita doble clic mientras se espera respuesta del servidor
 
   // ---------- Time helpers ----------
   function roundToNearest15(date){
@@ -494,7 +510,6 @@
     const mm = String(d.getMinutes()).padStart(2,"0");
     return `${hh}:${mm}`;
   }
-
   function fmtTimeSec(date){
     const d = new Date(date);
     const hh = String(d.getHours()).padStart(2,"0");
@@ -502,36 +517,30 @@
     const ss = String(d.getSeconds()).padStart(2,"0");
     return `${hh}:${mm}:${ss}`;
   }
-
   function fmtDateShort(date){
     const d = new Date(date);
     return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`;
   }
-
   function dateOnlyISO(date){
     const d = new Date(date);
     d.setHours(0,0,0,0);
     return d.toISOString().slice(0,10);
   }
-
   function hoursDecimal(entradaMs, salidaMs){
     if(!entradaMs || !salidaMs) return 0;
     const diff = salidaMs - entradaMs;
     return diff > 0 ? diff / (1000*60*60) : 0;
   }
-
   function fmtHoursMin(decimalHours){
     const totalMinutes = Math.round(decimalHours * 60);
     const h = Math.floor(totalMinutes / 60);
     const m = totalMinutes % 60;
     return `${h}:${String(m).padStart(2,"0")}`;
   }
-
-  // Monday-Sunday week range containing "date"
   function getWeekRange(date){
     const d = new Date(date);
     d.setHours(0,0,0,0);
-    const day = d.getDay(); // 0 = domingo
+    const day = d.getDay();
     const diffToMonday = (day === 0) ? -6 : 1 - day;
     const monday = new Date(d);
     monday.setDate(d.getDate() + diffToMonday);
@@ -541,44 +550,54 @@
     return { start: monday, end: sunday };
   }
 
-  // ---------- Regla 1: Control de Estado (última marca del historial) ----------
   function getMarcasOrdenadas(){
     return [...marcas].sort((a,b) => new Date(a.raw) - new Date(b.raw));
   }
-
-  function getUltimaMarca(){
+  function getUltimaMarcaLocal(){
     const ordenadas = getMarcasOrdenadas();
     return ordenadas.length > 0 ? ordenadas[ordenadas.length - 1] : null;
   }
 
-  // "trabajando" | "fuera"
-  function getEstadoActual(){
-    const ultima = getUltimaMarca();
-    if(!ultima || ultima.tipo === "Egreso") return "fuera";
-    return "trabajando"; // ultima.tipo === "Ingreso"
+  // ---------- REGLA CLAVE: estado combinado (servidor + pendientes locales) ----------
+  // El servidor es la fuente de verdad entre dispositivos. Pero si este dispositivo
+  // tiene una marca propia AÚN NO sincronizada (por ejemplo, quedó offline) y es más
+  // reciente que lo último que sabemos del servidor, esa marca local pendiente manda,
+  // porque representa la acción real más nueva del usuario en este dispositivo.
+  function getUltimaMarcaEfectiva(){
+    const candidatos = [];
+    const localUltima = getUltimaMarcaLocal();
+    if(localUltima){
+      candidatos.push({ tipo: localUltima.tipo, ts: new Date(localUltima.raw).getTime() });
+    }
+    if(ultimoEstadoServidor && ultimoEstadoServidor.tipo){
+      const ts = ultimoEstadoServidor.timestamp ? new Date(ultimoEstadoServidor.timestamp).getTime() : 0;
+      candidatos.push({ tipo: ultimoEstadoServidor.tipo, ts });
+    }
+    if(candidatos.length === 0) return null;
+    candidatos.sort((a,b) => b.ts - a.ts);
+    return candidatos[0];
   }
 
-  // Reconstruye sesiones (entrada+salida) a partir de la lista de marcas,
-  // solo para mostrar el resumen y el historial.
+  function getEstadoActual(){
+    const efectiva = getUltimaMarcaEfectiva();
+    if(!efectiva || efectiva.tipo === "Egreso") return "fuera";
+    return "trabajando";
+  }
+
+  // Reconstruye sesiones locales (entrada+salida) para el resumen/historial de ESTE dispositivo.
   function buildSesiones(){
     const ordenadas = getMarcasOrdenadas();
     const sesiones = [];
     let abierta = null;
-
     ordenadas.forEach(m => {
       if(m.tipo === "Ingreso"){
-        if(abierta) sesiones.push(abierta); // por seguridad, si hubiera datos inconsistentes
+        if(abierta) sesiones.push(abierta);
         abierta = {
-          id: m.id,
-          dateISO: dateOnlyISO(m.raw),
-          entradaRaw: m.raw,
-          entradaRounded: m.rounded,
-          entradaSynced: m.synced,
-          salidaRaw: null,
-          salidaRounded: null,
-          salidaSynced: null
+          id: m.id, dateISO: dateOnlyISO(m.raw),
+          entradaRaw: m.raw, entradaRounded: m.rounded, entradaSynced: m.synced,
+          salidaRaw: null, salidaRounded: null, salidaSynced: null
         };
-      } else { // Egreso
+      } else {
         if(abierta){
           abierta.salidaRaw = m.raw;
           abierta.salidaRounded = m.rounded;
@@ -587,14 +606,9 @@
           abierta = null;
         } else {
           sesiones.push({
-            id: m.id,
-            dateISO: dateOnlyISO(m.raw),
-            entradaRaw: null,
-            entradaRounded: null,
-            entradaSynced: null,
-            salidaRaw: m.raw,
-            salidaRounded: m.rounded,
-            salidaSynced: m.synced
+            id: m.id, dateISO: dateOnlyISO(m.raw),
+            entradaRaw: null, entradaRounded: null, entradaSynced: null,
+            salidaRaw: m.raw, salidaRounded: m.rounded, salidaSynced: m.synced
           });
         }
       }
@@ -603,117 +617,179 @@
     return sesiones;
   }
 
-  // ---------- Cloud sync (Google Sheets via Apps Script) ----------
-  // Google Apps Script Web Apps no siempre responden con cabeceras CORS legibles,
-  // así que usamos mode:'no-cors' y content-type 'text/plain' para evitar el preflight.
-  function enviarAGoogleSheets(payload){
-    return fetch(GAS_URL, {
-      method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(payload)
-    });
-  }
-
-  function intentarSincronizar(marca){
-    if(!navigator.onLine){
-      showToast("Guardado localmente. Se sincronizará cuando haya conexión.", "warning");
-      return;
-    }
-
-    // Los 4 datos originales solicitados: Fecha, Tipo, Hora Original, Hora Redondeada
+  // ---------- Comunicación con Apps Script ----------
+  // NOTA IMPORTANTE: usamos Content-Type "text/plain" (no "application/json") para
+  // que el navegador lo trate como "solicitud simple" y NO dispare un preflight
+  // OPTIONS, que Apps Script no responde por defecto. Esto permite además LEER la
+  // respuesta JSON real del servidor (a diferencia de mode:"no-cors").
+  async function enviarMarcaAlServidor(marca){
     const payload = {
       id: marca.id,
+      timestamp: marca.raw,
       fecha: dateOnlyISO(marca.raw),
       tipo: marca.tipo,
       horaOriginal: fmtTimeSec(marca.raw),
       horaRedondeada: fmtTime(marca.rounded)
     };
-
-    enviarAGoogleSheets(payload)
-      .then(() => {
-        marca.synced = true;
-        saveMarcas(marcas);
-        render();
-        showToast("Sincronizado con la nube ☁️", "success");
-      })
-      .catch((err) => {
-        console.error("Error de sincronización:", err);
-        marca.synced = false;
-        saveMarcas(marcas);
-        render();
-        showToast("Sin conexión. Se guardó local y se sincronizará luego.", "warning");
-      });
+    const res = await fetch(GAS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    });
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    return res.json(); // { status:"ok" } | { status:"rejected", motivo, ultimoEstado }
   }
 
-  function reintentarPendientes(silencioso){
+  async function consultarEstadoServidor(){
+    const res = await fetch(`${GAS_URL}?action=estado&_=${Date.now()}`, {
+      method: "GET",
+      cache: "no-store"
+    });
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    return res.json(); // { tipo, timestamp, fecha, horaOriginal, horaRedondeada } | { tipo:null }
+  }
+
+  async function actualizarEstadoDesdeServidor(silencioso){
+    try{
+      const data = await consultarEstadoServidor();
+      ultimoEstadoServidor = data && data.tipo ? data : null;
+      servidorVerificado = true;
+      ultimaVerificacionTs = new Date();
+      render();
+    }catch(err){
+      console.warn("No se pudo verificar el estado en el servidor:", err);
+      servidorVerificado = false;
+      render();
+      if(!silencioso) showToast("No se pudo verificar el estado con el servidor.", "warning");
+    }
+  }
+
+  // Reintenta subir marcas locales que quedaron pendientes (offline en su momento)
+  async function reintentarPendientes(silencioso){
     if(!navigator.onLine) return;
-    const pendientes = marcas.filter(m => !m.synced);
+    const pendientes = marcas.filter(m => m.synced === false);
     if(pendientes.length === 0){
       if(!silencioso) showToast("No hay registros pendientes de sincronizar.", "success");
       return;
     }
     if(!silencioso) showToast(`Sincronizando ${pendientes.length} registro(s) pendiente(s)...`, "warning");
-    pendientes.forEach(m => intentarSincronizar(m));
+
+    for(const m of pendientes){
+      try{
+        const resp = await enviarMarcaAlServidor(m);
+        if(resp && resp.status === "ok"){
+          m.synced = true;
+        } else if(resp && resp.status === "rejected"){
+          // Otro dispositivo ya generó una marca en conflicto mientras este estaba offline.
+          m.synced = "conflict";
+          ultimoEstadoServidor = resp.ultimoEstado || ultimoEstadoServidor;
+          servidorVerificado = true;
+        }
+      }catch(err){
+        console.warn("Reintento fallido para marca", m.id, err);
+      }
+    }
+    saveMarcas(marcas);
+    render();
   }
 
-  // ---------- Regla 2: acciones de marcado con bloqueo inteligente ----------
-  function marcarIngreso(){
+  // ---------- Acciones de marcado (con validación real del servidor) ----------
+  function setBotonesCargando(loading){
+    botonesCargando = loading;
+    render();
+  }
+
+  async function marcarIngreso(){
+    if(botonesCargando) return;
     if(getEstadoActual() !== "fuera"){
-      showToast("Ya estás marcado como Trabajando. Marcá tu Egreso primero.", "warning");
+      showToast("Ya estás marcado como Trabajando.", "warning");
       return;
     }
-    const now = new Date();
-    const rounded = roundToNearest15(now);
-    const marca = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
-      tipo: "Ingreso",
-      raw: now.toISOString(),
-      rounded: rounded.toISOString(),
-      synced: false
-    };
-
-    // Guardado local inmediato
-    marcas.push(marca);
-    saveMarcas(marcas);
-    render();
-    showToast(`Ingreso registrado a las ${fmtTime(rounded)}`, "success");
-
-    // Envío en segundo plano
-    intentarSincronizar(marca);
+    await ejecutarMarca("Ingreso");
   }
 
-  function marcarEgreso(){
+  async function marcarEgreso(){
+    if(botonesCargando) return;
     if(getEstadoActual() !== "trabajando"){
-      showToast("No hay un Ingreso activo. Marcá tu Ingreso primero.", "warning");
+      showToast("No hay un Ingreso activo para marcar egreso.", "warning");
       return;
     }
+    await ejecutarMarca("Egreso");
+  }
+
+  async function ejecutarMarca(tipo){
     const now = new Date();
     const rounded = roundToNearest15(now);
-    const marca = {
+    const marcaTentativa = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
-      tipo: "Egreso",
+      tipo,
       raw: now.toISOString(),
       rounded: rounded.toISOString(),
       synced: false
     };
 
-    // Guardado local inmediato
-    marcas.push(marca);
-    saveMarcas(marcas);
-    render();
-    showToast(`Egreso registrado a las ${fmtTime(rounded)}`, "success");
+    if(!navigator.onLine){
+      // Sin conexión: no hay forma de validar contra otros dispositivos en este momento.
+      marcas.push(marcaTentativa);
+      saveMarcas(marcas);
+      render();
+      showToast(`${tipo} guardado localmente. Sin conexión: se validará y sincronizará luego.`, "warning");
+      return;
+    }
 
-    // Envío en segundo plano
-    intentarSincronizar(marca);
+    setBotonesCargando(true);
+    try{
+      const resp = await enviarMarcaAlServidor(marcaTentativa);
+
+      if(resp && resp.status === "ok"){
+        marcaTentativa.synced = true;
+        marcas.push(marcaTentativa);
+        saveMarcas(marcas);
+        ultimoEstadoServidor = {
+          tipo, timestamp: marcaTentativa.raw,
+          fecha: dateOnlyISO(marcaTentativa.raw),
+          horaOriginal: fmtTimeSec(marcaTentativa.raw),
+          horaRedondeada: fmtTime(marcaTentativa.rounded)
+        };
+        servidorVerificado = true;
+        ultimaVerificacionTs = new Date();
+        setBotonesCargando(false);
+        showToast(`${tipo} registrado y sincronizado con la nube ☁️`, "success");
+
+      } else if(resp && resp.status === "rejected"){
+        // El servidor detectó que otro dispositivo ya cambió el estado antes que
+        // esta petición llegara. No se guarda un registro duplicado/erróneo.
+        ultimoEstadoServidor = resp.ultimoEstado || ultimoEstadoServidor;
+        servidorVerificado = true;
+        ultimaVerificacionTs = new Date();
+        setBotonesCargando(false);
+        const tipoServidor = resp.ultimoEstado ? resp.ultimoEstado.tipo : null;
+        showToast(
+          tipoServidor === "Ingreso"
+            ? "Ya existe un Ingreso activo registrado desde otro dispositivo."
+            : "No hay un Ingreso activo según el servidor. No se registró el Egreso.",
+          "error"
+        );
+      } else {
+        throw new Error("Respuesta inesperada del servidor");
+      }
+    }catch(err){
+      console.error("Fallo al validar con el servidor:", err);
+      // No se pudo confirmar con el servidor (caída de red a mitad de camino, etc.).
+      // Se guarda local como respaldo, marcado pendiente para reintentar y revalidar.
+      marcas.push(marcaTentativa);
+      saveMarcas(marcas);
+      setBotonesCargando(false);
+      showToast(`${tipo} guardado localmente. No se pudo confirmar con el servidor; se reintentará.`, "warning");
+    }
   }
 
   function resetAll(){
-    if(!confirm("¿Seguro que deseas borrar todos los registros guardados localmente? Esta acción no se puede deshacer (no borra la hoja de cálculo).")) return;
+    if(!confirm("¿Borrar el historial guardado en ESTE dispositivo? Esto no afecta los datos ya guardados en Google Sheets.")) return;
     marcas = [];
     saveMarcas(marcas);
     render();
-    showToast("Registros locales eliminados", "success");
+    showToast("Historial local eliminado", "success");
   }
 
   // ---------- Rendering ----------
@@ -729,13 +805,21 @@
     }
   }
 
-  // Regla 3: indicador de estado visual grande
   function renderEstadoBox(){
-    const estado = getEstadoActual();
     const box = document.getElementById("estadoBox");
     const emoji = document.getElementById("estadoEmoji");
     const texto = document.getElementById("estadoTexto");
+    const verif = document.getElementById("estadoVerificacion");
 
+    if(botonesCargando){
+      box.className = "estado-box cargando";
+      emoji.textContent = "⏳";
+      texto.textContent = "Verificando con el servidor...";
+      verif.textContent = "Confirmando con Google Sheets";
+      return;
+    }
+
+    const estado = getEstadoActual();
     if(estado === "trabajando"){
       box.className = "estado-box trabajando";
       emoji.textContent = "🟢";
@@ -745,15 +829,29 @@
       emoji.textContent = "🔴";
       texto.textContent = "Estado actual: Fuera del trabajo";
     }
+
+    if(servidorVerificado){
+      const seg = ultimaVerificacionTs ? Math.max(0, Math.round((Date.now() - ultimaVerificacionTs.getTime())/1000)) : null;
+      verif.textContent = seg !== null ? `✔ Verificado con el servidor (hace ${seg}s)` : "✔ Verificado con el servidor";
+    } else {
+      verif.textContent = "⚠ Sin verificar con el servidor — usando último dato conocido";
+    }
   }
 
-  // Regla 2: bloqueo inteligente de botones
   function renderBotones(){
     const estado = getEstadoActual();
     const btnIngreso = document.getElementById("btnIngreso");
     const btnEgreso = document.getElementById("btnEgreso");
     const subIngreso = document.getElementById("subIngreso");
     const subEgreso = document.getElementById("subEgreso");
+
+    if(botonesCargando){
+      btnIngreso.disabled = true;
+      btnEgreso.disabled = true;
+      subIngreso.textContent = "Verificando...";
+      subEgreso.textContent = "Verificando...";
+      return;
+    }
 
     if(estado === "fuera"){
       btnIngreso.disabled = false;
@@ -769,21 +867,21 @@
   }
 
   function renderStatusRow(){
-    const ultima = getUltimaMarca();
+    const efectiva = getUltimaMarcaEfectiva();
     const dot = document.getElementById("statusDot");
     const text = document.getElementById("statusText");
 
-    if(!ultima){
+    if(!efectiva){
       dot.classList.remove("active");
       text.textContent = "Sin marcas registradas";
       return;
     }
-    if(ultima.tipo === "Ingreso"){
+    if(efectiva.tipo === "Ingreso"){
       dot.classList.add("active");
-      text.textContent = `Ingresaste a las ${fmtTime(ultima.rounded)}`;
+      text.textContent = `Ingreso activo desde las ${fmtTime(new Date(efectiva.ts))}`;
     } else {
       dot.classList.remove("active");
-      text.textContent = `Última salida: ${fmtTime(ultima.rounded)}`;
+      text.textContent = `Última salida: ${fmtTime(new Date(efectiva.ts))}`;
     }
   }
 
@@ -800,14 +898,14 @@
       `${fmtDateShort(start)} — ${fmtDateShort(end)}`;
 
     let totalHours = 0;
-    const perDay = [0,0,0,0,0,0,0]; // index 0=lunes ... 6=domingo
+    const perDay = [0,0,0,0,0,0,0];
 
     weekSesiones.forEach(s => {
       if(s.entradaRounded && s.salidaRounded){
         const h = hoursDecimal(new Date(s.entradaRounded).getTime(), new Date(s.salidaRounded).getTime());
         totalHours += h;
         const ref = s.entradaRaw || s.salidaRaw;
-        const jsDay = new Date(ref).getDay(); // 0=domingo
+        const jsDay = new Date(ref).getDay();
         const idx = (jsDay === 0) ? 6 : jsDay - 1;
         perDay[idx] += h;
       }
@@ -858,7 +956,7 @@
       container.innerHTML = `
         <div class="empty-state">
           <span class="icon">&#128203;</span>
-          Todavía no hay registros esta semana.<br>Marcá tu ingreso para comenzar.
+          Todavía no hay registros esta semana en este dispositivo.<br>Marcá tu ingreso para comenzar.
         </div>`;
       return;
     }
@@ -881,12 +979,15 @@
         ? fmtHoursMin(hoursDecimal(new Date(s.entradaRounded).getTime(), new Date(s.salidaRounded).getTime()))
         : "—";
 
-      const entradaOk = s.entradaRounded ? !!s.entradaSynced : true;
-      const salidaOk = s.salidaRounded ? !!s.salidaSynced : true;
-      const totalmenteSincronizado = entradaOk && salidaOk;
-      const syncHtml = totalmenteSincronizado
-        ? `<span class="sync-tag synced">☁️ Sincronizado</span>`
-        : `<span class="sync-tag pending">⏳ Pendiente</span>`;
+      const estados = [s.entradaSynced, s.salidaRounded ? s.salidaSynced : true].filter(v => v !== null);
+      let syncHtml;
+      if(estados.includes("conflict")){
+        syncHtml = `<span class="sync-tag conflict">⚠ Conflicto</span>`;
+      } else if(estados.every(v => v === true)){
+        syncHtml = `<span class="sync-tag synced">☁️ Sincronizado</span>`;
+      } else {
+        syncHtml = `<span class="sync-tag pending">⏳ Pendiente</span>`;
+      }
 
       item.innerHTML = `
         <div class="hist-left">
@@ -916,27 +1017,24 @@
     renderHistory();
   }
 
-  // ---------- Clock ----------
   function tickClock(){
     const now = new Date();
     const hh = String(now.getHours()).padStart(2,"0");
     const mm = String(now.getMinutes()).padStart(2,"0");
     const ss = String(now.getSeconds()).padStart(2,"0");
     document.getElementById("clock").textContent = `${hh}:${mm}:${ss}`;
-
     const dayName = DIAS[now.getDay()];
     const dateStr = `${dayName}, ${now.getDate()} de ${now.toLocaleString('es-ES', { month: 'long' })}`;
     document.getElementById("clockDate").textContent = dateStr;
   }
 
-  // ---------- Toast ----------
   let toastTimer = null;
   function showToast(msg, type){
     const toast = document.getElementById("toast");
     toast.textContent = msg;
     toast.className = "toast show" + (type ? (" " + type) : "");
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove("show"), 3000);
+    toastTimer = setTimeout(() => toast.classList.remove("show"), 3200);
   }
 
   // ---------- Init ----------
@@ -947,26 +1045,25 @@
 
   window.addEventListener("online", () => {
     render();
-    showToast("Conexión recuperada. Sincronizando pendientes...", "warning");
-    reintentarPendientes(true);
+    showToast("Conexión recuperada. Verificando estado real...", "warning");
+    actualizarEstadoDesdeServidor(true).then(() => reintentarPendientes(true));
   });
   window.addEventListener("offline", () => {
     render();
-    showToast("Sin conexión a internet. Los registros se guardan localmente.", "warning");
+    showToast("Sin conexión a internet. No se puede verificar el estado con otros dispositivos.", "warning");
   });
 
   tickClock();
   setInterval(tickClock, 1000);
   render();
 
-  // Reintenta sincronizar pendientes al abrir la app (por si quedaron sin enviar)
-  reintentarPendientes(true);
+  // Verificación inicial obligatoria contra el servidor antes de habilitar botones,
+  // y luego sondeo periódico para reflejar marcas hechas desde OTROS dispositivos.
+  actualizarEstadoDesdeServidor(true).then(() => reintentarPendientes(true));
+  setInterval(() => actualizarEstadoDesdeServidor(true), POLL_INTERVAL_MS);
 
-  // Reintento periódico silencioso cada 60s + refresco de vista semanal
-  setInterval(() => {
-    render();
-    reintentarPendientes(true);
-  }, 60000);
+  // Refresco de reloj/semana + reintento de pendientes cada 60s
+  setInterval(() => { render(); }, 60000);
 
 })();
 </script>
