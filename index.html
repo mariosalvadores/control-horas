@@ -20,6 +20,8 @@
     --rojo-egreso:#B3452F;
     --rojo-egreso-dark:#8F3524;
     --ambar:#B7791F;
+    --gris-disabled-bg:#CDD5DC;
+    --gris-disabled-txt:#7C8894;
     --radius-lg:18px;
     --radius-md:12px;
     --shadow:0 2px 10px rgba(14,42,71,0.08);
@@ -102,7 +104,7 @@
   .conn-badge.offline .conn-dot{background:#E0A93F;}
   .conn-badge.offline{color:#F3DFAF;}
 
-  /* STATUS PILL */
+  /* STATUS PILL (dentro del header) */
   .status-row{
     display:flex;
     align-items:center;
@@ -124,6 +126,32 @@
   }
   .status-row span{font-size:13px;color:#E4ECF3;font-weight:500;}
 
+  /* INDICADOR DE ESTADO ACTUAL (grande, arriba de los botones) */
+  .estado-box{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    padding:14px 16px;
+    border-radius:var(--radius-md);
+    font-weight:700;
+    font-size:15px;
+    margin-bottom:14px;
+    border:2px solid transparent;
+    transition:background .2s ease, border-color .2s ease, color .2s ease;
+  }
+  .estado-box .estado-emoji{font-size:18px;}
+  .estado-box.trabajando{
+    background:#E7F4EE;
+    color:var(--verde-ingreso-dark);
+    border-color:var(--verde-ingreso);
+  }
+  .estado-box.fuera{
+    background:#FBEAE6;
+    color:var(--rojo-egreso-dark);
+    border-color:var(--rojo-egreso);
+  }
+
   /* MAIN BUTTONS */
   .punch-grid{
     display:grid;
@@ -141,21 +169,26 @@
     gap:8px;
     font-family:inherit;
     cursor:pointer;
-    transition:transform .12s ease, box-shadow .12s ease, opacity .2s ease;
+    transition:transform .12s ease, box-shadow .12s ease, background .2s ease, color .2s ease;
     box-shadow:var(--shadow);
     color:var(--blanco);
   }
   .punch-btn:active{transform:scale(0.96);}
-  .punch-btn:disabled{
-    opacity:0.45;
-    cursor:not-allowed;
-    transform:none;
-  }
   .punch-btn.ingreso{
     background:linear-gradient(160deg,var(--verde-ingreso),var(--verde-ingreso-dark));
   }
   .punch-btn.egreso{
     background:linear-gradient(160deg,var(--rojo-egreso),var(--rojo-egreso-dark));
+  }
+  /* El estado "disabled" siempre gana: botón gris plano, sin sombra, sin click */
+  .punch-btn:disabled{
+    background:var(--gris-disabled-bg) !important;
+    color:var(--gris-disabled-txt) !important;
+    box-shadow:none;
+    opacity:1;
+    cursor:not-allowed;
+    transform:none;
+    pointer-events:none;
   }
   .punch-btn .icon{font-size:26px;line-height:1;}
   .punch-btn .label{font-size:15px;font-weight:700;letter-spacing:.3px;}
@@ -363,9 +396,14 @@
     <div class="clock-date" id="clockDate">-</div>
     <div class="status-row">
       <span class="status-dot" id="statusDot"></span>
-      <span id="statusText">Sin marcar hoy</span>
+      <span id="statusText">Sin marcas registradas</span>
     </div>
   </header>
+
+  <div class="estado-box" id="estadoBox">
+    <span class="estado-emoji" id="estadoEmoji">🔴</span>
+    <span id="estadoTexto">Estado actual: Fuera del trabajo</span>
+  </div>
 
   <div class="punch-grid">
     <button class="punch-btn ingreso" id="btnIngreso">
@@ -373,7 +411,7 @@
       <span class="label">INGRESO</span>
       <span class="sub" id="subIngreso">Marcar entrada</span>
     </button>
-    <button class="punch-btn egreso" id="btnEgreso" disabled>
+    <button class="punch-btn egreso" id="btnEgreso">
       <span class="icon">&#8592;</span>
       <span class="label">EGRESO</span>
       <span class="sub" id="subEgreso">Marcar salida</span>
@@ -408,14 +446,16 @@
 (function(){
   "use strict";
 
-  const STORAGE_KEY = "control_ingreso_egreso_v1";
+  const STORAGE_KEY = "control_ingreso_egreso_marcas_v2";
   // URL de tu Google Apps Script (Web App) desplegado con acceso "Cualquier usuario"
   const GAS_URL = "https://script.google.com/macros/s/AKfycbwsI91SVLrgUkHX0VCIXGlo0SnWbtdJ88k5DuBEF3Q7qJxofwbJGeOVW8yrp5IpNGC9rw/exec";
 
   const DIAS = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
 
   // ---------- Storage ----------
-  function loadRecords(){
+  // "marcas" es la lista plana y cronológica de cada click de Ingreso/Egreso.
+  // Es la fuente de verdad para el estado actual (evita solapamientos).
+  function loadMarcas(){
     try{
       const raw = localStorage.getItem(STORAGE_KEY);
       return raw ? JSON.parse(raw) : [];
@@ -424,11 +464,11 @@
       return [];
     }
   }
-  function saveRecords(records){
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+  function saveMarcas(marcas){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(marcas));
   }
 
-  let records = loadRecords();
+  let marcas = loadMarcas();
 
   // ---------- Time helpers ----------
   function roundToNearest15(date){
@@ -501,11 +541,71 @@
     return { start: monday, end: sunday };
   }
 
+  // ---------- Regla 1: Control de Estado (última marca del historial) ----------
+  function getMarcasOrdenadas(){
+    return [...marcas].sort((a,b) => new Date(a.raw) - new Date(b.raw));
+  }
+
+  function getUltimaMarca(){
+    const ordenadas = getMarcasOrdenadas();
+    return ordenadas.length > 0 ? ordenadas[ordenadas.length - 1] : null;
+  }
+
+  // "trabajando" | "fuera"
+  function getEstadoActual(){
+    const ultima = getUltimaMarca();
+    if(!ultima || ultima.tipo === "Egreso") return "fuera";
+    return "trabajando"; // ultima.tipo === "Ingreso"
+  }
+
+  // Reconstruye sesiones (entrada+salida) a partir de la lista de marcas,
+  // solo para mostrar el resumen y el historial.
+  function buildSesiones(){
+    const ordenadas = getMarcasOrdenadas();
+    const sesiones = [];
+    let abierta = null;
+
+    ordenadas.forEach(m => {
+      if(m.tipo === "Ingreso"){
+        if(abierta) sesiones.push(abierta); // por seguridad, si hubiera datos inconsistentes
+        abierta = {
+          id: m.id,
+          dateISO: dateOnlyISO(m.raw),
+          entradaRaw: m.raw,
+          entradaRounded: m.rounded,
+          entradaSynced: m.synced,
+          salidaRaw: null,
+          salidaRounded: null,
+          salidaSynced: null
+        };
+      } else { // Egreso
+        if(abierta){
+          abierta.salidaRaw = m.raw;
+          abierta.salidaRounded = m.rounded;
+          abierta.salidaSynced = m.synced;
+          sesiones.push(abierta);
+          abierta = null;
+        } else {
+          sesiones.push({
+            id: m.id,
+            dateISO: dateOnlyISO(m.raw),
+            entradaRaw: null,
+            entradaRounded: null,
+            entradaSynced: null,
+            salidaRaw: m.raw,
+            salidaRounded: m.rounded,
+            salidaSynced: m.synced
+          });
+        }
+      }
+    });
+    if(abierta) sesiones.push(abierta);
+    return sesiones;
+  }
+
   // ---------- Cloud sync (Google Sheets via Apps Script) ----------
   // Google Apps Script Web Apps no siempre responden con cabeceras CORS legibles,
   // así que usamos mode:'no-cors' y content-type 'text/plain' para evitar el preflight.
-  // No podemos leer el cuerpo de la respuesta, pero sí sabemos si la petición llegó a
-  // salir por la red (si falla, es porque no hay conexión o el navegador la bloqueó).
   function enviarAGoogleSheets(payload){
     return fetch(GAS_URL, {
       method: "POST",
@@ -515,41 +615,32 @@
     });
   }
 
-  function intentarSincronizar(record, tipo){
-    // tipo: "entrada" | "salida"
+  function intentarSincronizar(marca){
     if(!navigator.onLine){
       showToast("Guardado localmente. Se sincronizará cuando haya conexión.", "warning");
       return;
     }
 
-    const entradaDate = new Date(record.entradaRaw);
+    // Los 4 datos originales solicitados: Fecha, Tipo, Hora Original, Hora Redondeada
     const payload = {
-      id: record.id,
-      tipo: tipo === "entrada" ? "Ingreso" : "Egreso",
-      dia: DIAS[entradaDate.getDay()],
-      fecha: record.dateISO,
-      horaOriginal: tipo === "entrada" ? fmtTimeSec(record.entradaRaw) : fmtTimeSec(record.salidaRaw),
-      horaRedondeada: tipo === "entrada" ? fmtTime(record.entradaRounded) : fmtTime(record.salidaRounded),
-      timestampOriginal: tipo === "entrada" ? record.entradaRaw : record.salidaRaw,
-      timestampRedondeado: tipo === "entrada" ? record.entradaRounded : record.salidaRounded,
-      horasTotales: (tipo === "salida" && record.salidaRounded)
-        ? fmtHoursMin(hoursDecimal(new Date(record.entradaRounded).getTime(), new Date(record.salidaRounded).getTime()))
-        : ""
+      id: marca.id,
+      fecha: dateOnlyISO(marca.raw),
+      tipo: marca.tipo,
+      horaOriginal: fmtTimeSec(marca.raw),
+      horaRedondeada: fmtTime(marca.rounded)
     };
 
     enviarAGoogleSheets(payload)
       .then(() => {
-        // Con mode:'no-cors' no se puede leer el status real, pero si la promesa
-        // resuelve significa que la petición salió correctamente por la red.
-        if(tipo === "entrada"){ record.entradaSynced = true; } else { record.salidaSynced = true; }
-        saveRecords(records);
+        marca.synced = true;
+        saveMarcas(marcas);
         render();
         showToast("Sincronizado con la nube ☁️", "success");
       })
       .catch((err) => {
         console.error("Error de sincronización:", err);
-        if(tipo === "entrada"){ record.entradaSynced = false; } else { record.salidaSynced = false; }
-        saveRecords(records);
+        marca.synced = false;
+        saveMarcas(marcas);
         render();
         showToast("Sin conexión. Se guardó local y se sincronizará luego.", "warning");
       });
@@ -557,77 +648,70 @@
 
   function reintentarPendientes(silencioso){
     if(!navigator.onLine) return;
-    const pendientes = records.filter(r => !r.entradaSynced || (r.salidaRaw && !r.salidaSynced));
+    const pendientes = marcas.filter(m => !m.synced);
     if(pendientes.length === 0){
       if(!silencioso) showToast("No hay registros pendientes de sincronizar.", "success");
       return;
     }
     if(!silencioso) showToast(`Sincronizando ${pendientes.length} registro(s) pendiente(s)...`, "warning");
-    pendientes.forEach(r => {
-      if(!r.entradaSynced) intentarSincronizar(r, "entrada");
-      if(r.salidaRaw && !r.salidaSynced) intentarSincronizar(r, "salida");
-    });
+    pendientes.forEach(m => intentarSincronizar(m));
   }
 
-  // ---------- State logic ----------
-  function getOpenSessionToday(){
-    const todayISO = dateOnlyISO(new Date());
-    return records.find(r => r.dateISO === todayISO && r.salidaRaw === null) || null;
-  }
-
+  // ---------- Regla 2: acciones de marcado con bloqueo inteligente ----------
   function marcarIngreso(){
-    const open = getOpenSessionToday();
-    if(open){
-      showToast("Ya registraste un ingreso pendiente de egreso.", "warning");
+    if(getEstadoActual() !== "fuera"){
+      showToast("Ya estás marcado como Trabajando. Marcá tu Egreso primero.", "warning");
       return;
     }
     const now = new Date();
     const rounded = roundToNearest15(now);
-    const record = {
+    const marca = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
-      dateISO: dateOnlyISO(now),
-      entradaRaw: now.toISOString(),
-      entradaRounded: rounded.toISOString(),
-      entradaSynced: false,
-      salidaRaw: null,
-      salidaRounded: null,
-      salidaSynced: false
+      tipo: "Ingreso",
+      raw: now.toISOString(),
+      rounded: rounded.toISOString(),
+      synced: false
     };
-    // 1. Guardado local inmediato
-    records.push(record);
-    saveRecords(records);
+
+    // Guardado local inmediato
+    marcas.push(marca);
+    saveMarcas(marcas);
     render();
     showToast(`Ingreso registrado a las ${fmtTime(rounded)}`, "success");
 
-    // 2. Envío en segundo plano a Google Sheets
-    intentarSincronizar(record, "entrada");
+    // Envío en segundo plano
+    intentarSincronizar(marca);
   }
 
   function marcarEgreso(){
-    const open = getOpenSessionToday();
-    if(!open){
-      showToast("No hay un ingreso activo para marcar egreso.", "warning");
+    if(getEstadoActual() !== "trabajando"){
+      showToast("No hay un Ingreso activo. Marcá tu Ingreso primero.", "warning");
       return;
     }
     const now = new Date();
     const rounded = roundToNearest15(now);
-    open.salidaRaw = now.toISOString();
-    open.salidaRounded = rounded.toISOString();
-    open.salidaSynced = false;
+    const marca = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+      tipo: "Egreso",
+      raw: now.toISOString(),
+      rounded: rounded.toISOString(),
+      synced: false
+    };
 
-    // 1. Guardado local inmediato
-    saveRecords(records);
+    // Guardado local inmediato
+    marcas.push(marca);
+    saveMarcas(marcas);
     render();
     showToast(`Egreso registrado a las ${fmtTime(rounded)}`, "success");
 
-    // 2. Envío en segundo plano a Google Sheets
-    intentarSincronizar(open, "salida");
+    // Envío en segundo plano
+    intentarSincronizar(marca);
   }
 
   function resetAll(){
     if(!confirm("¿Seguro que deseas borrar todos los registros guardados localmente? Esta acción no se puede deshacer (no borra la hoja de cálculo).")) return;
-    records = [];
-    saveRecords(records);
+    marcas = [];
+    saveMarcas(marcas);
     render();
     showToast("Registros locales eliminados", "success");
   }
@@ -645,42 +729,70 @@
     }
   }
 
-  function renderStatus(){
-    const open = getOpenSessionToday();
-    const dot = document.getElementById("statusDot");
-    const text = document.getElementById("statusText");
+  // Regla 3: indicador de estado visual grande
+  function renderEstadoBox(){
+    const estado = getEstadoActual();
+    const box = document.getElementById("estadoBox");
+    const emoji = document.getElementById("estadoEmoji");
+    const texto = document.getElementById("estadoTexto");
+
+    if(estado === "trabajando"){
+      box.className = "estado-box trabajando";
+      emoji.textContent = "🟢";
+      texto.textContent = "Estado actual: Trabajando";
+    } else {
+      box.className = "estado-box fuera";
+      emoji.textContent = "🔴";
+      texto.textContent = "Estado actual: Fuera del trabajo";
+    }
+  }
+
+  // Regla 2: bloqueo inteligente de botones
+  function renderBotones(){
+    const estado = getEstadoActual();
     const btnIngreso = document.getElementById("btnIngreso");
     const btnEgreso = document.getElementById("btnEgreso");
     const subIngreso = document.getElementById("subIngreso");
     const subEgreso = document.getElementById("subEgreso");
 
-    if(open){
-      dot.classList.add("active");
-      text.textContent = `Ingresaste a las ${fmtTime(open.entradaRounded)}`;
-      btnIngreso.disabled = true;
-      btnEgreso.disabled = false;
-      subIngreso.textContent = "Ya marcado";
-      subEgreso.textContent = "Marcar salida";
-    } else {
-      dot.classList.remove("active");
-      const todayISO = dateOnlyISO(new Date());
-      const todaysClosed = records.filter(r => r.dateISO === todayISO && r.salidaRaw !== null);
-      if(todaysClosed.length > 0){
-        text.textContent = "Jornada de hoy completada";
-      } else {
-        text.textContent = "Sin marcar hoy";
-      }
+    if(estado === "fuera"){
       btnIngreso.disabled = false;
       btnEgreso.disabled = true;
       subIngreso.textContent = "Marcar entrada";
+      subEgreso.textContent = "Bloqueado";
+    } else {
+      btnIngreso.disabled = true;
+      btnEgreso.disabled = false;
+      subIngreso.textContent = "Bloqueado";
       subEgreso.textContent = "Marcar salida";
+    }
+  }
+
+  function renderStatusRow(){
+    const ultima = getUltimaMarca();
+    const dot = document.getElementById("statusDot");
+    const text = document.getElementById("statusText");
+
+    if(!ultima){
+      dot.classList.remove("active");
+      text.textContent = "Sin marcas registradas";
+      return;
+    }
+    if(ultima.tipo === "Ingreso"){
+      dot.classList.add("active");
+      text.textContent = `Ingresaste a las ${fmtTime(ultima.rounded)}`;
+    } else {
+      dot.classList.remove("active");
+      text.textContent = `Última salida: ${fmtTime(ultima.rounded)}`;
     }
   }
 
   function renderWeekSummary(){
     const { start, end } = getWeekRange(new Date());
-    const weekRecords = records.filter(r => {
-      const rd = new Date(r.entradaRaw);
+    const sesiones = buildSesiones();
+    const weekSesiones = sesiones.filter(s => {
+      const ref = s.entradaRaw || s.salidaRaw;
+      const rd = new Date(ref);
       return rd >= start && rd <= end;
     });
 
@@ -690,11 +802,12 @@
     let totalHours = 0;
     const perDay = [0,0,0,0,0,0,0]; // index 0=lunes ... 6=domingo
 
-    weekRecords.forEach(r => {
-      if(r.salidaRounded){
-        const h = hoursDecimal(new Date(r.entradaRounded).getTime(), new Date(r.salidaRounded).getTime());
+    weekSesiones.forEach(s => {
+      if(s.entradaRounded && s.salidaRounded){
+        const h = hoursDecimal(new Date(s.entradaRounded).getTime(), new Date(s.salidaRounded).getTime());
         totalHours += h;
-        const jsDay = new Date(r.entradaRaw).getDay(); // 0=domingo
+        const ref = s.entradaRaw || s.salidaRaw;
+        const jsDay = new Date(ref).getDay(); // 0=domingo
         const idx = (jsDay === 0) ? 6 : jsDay - 1;
         perDay[idx] += h;
       }
@@ -729,17 +842,19 @@
 
   function renderHistory(){
     const { start, end } = getWeekRange(new Date());
-    const weekRecords = records
-      .filter(r => {
-        const rd = new Date(r.entradaRaw);
+    const sesiones = buildSesiones();
+    const weekSesiones = sesiones
+      .filter(s => {
+        const ref = s.entradaRaw || s.salidaRaw;
+        const rd = new Date(ref);
         return rd >= start && rd <= end;
       })
-      .sort((a,b) => new Date(b.entradaRaw) - new Date(a.entradaRaw));
+      .sort((a,b) => new Date(b.entradaRaw || b.salidaRaw) - new Date(a.entradaRaw || a.salidaRaw));
 
     const container = document.getElementById("historyList");
     container.innerHTML = "";
 
-    if(weekRecords.length === 0){
+    if(weekSesiones.length === 0){
       container.innerHTML = `
         <div class="empty-state">
           <span class="icon">&#128203;</span>
@@ -748,21 +863,27 @@
       return;
     }
 
-    weekRecords.forEach(r => {
-      const entradaDate = new Date(r.entradaRaw);
-      const dayName = DIAS[entradaDate.getDay()];
+    weekSesiones.forEach(s => {
+      const ref = s.entradaRaw || s.salidaRaw;
+      const refDate = new Date(ref);
+      const dayName = DIAS[refDate.getDay()];
       const item = document.createElement("div");
       item.className = "history-item";
 
-      const salidaHtml = r.salidaRounded
-        ? `<span>${fmtTime(r.salidaRounded)}</span>`
+      const entradaHtml = s.entradaRounded
+        ? `<span>${fmtTime(s.entradaRounded)}</span>`
+        : `<span class="pending">sin ingreso</span>`;
+      const salidaHtml = s.salidaRounded
+        ? `<span>${fmtTime(s.salidaRounded)}</span>`
         : `<span class="pending">en curso</span>`;
 
-      const horasHtml = r.salidaRounded
-        ? fmtHoursMin(hoursDecimal(new Date(r.entradaRounded).getTime(), new Date(r.salidaRounded).getTime()))
+      const horasHtml = (s.entradaRounded && s.salidaRounded)
+        ? fmtHoursMin(hoursDecimal(new Date(s.entradaRounded).getTime(), new Date(s.salidaRounded).getTime()))
         : "—";
 
-      const totalmenteSincronizado = r.entradaSynced && (r.salidaRaw ? r.salidaSynced : true);
+      const entradaOk = s.entradaRounded ? !!s.entradaSynced : true;
+      const salidaOk = s.salidaRounded ? !!s.salidaSynced : true;
+      const totalmenteSincronizado = entradaOk && salidaOk;
       const syncHtml = totalmenteSincronizado
         ? `<span class="sync-tag synced">☁️ Sincronizado</span>`
         : `<span class="sync-tag pending">⏳ Pendiente</span>`;
@@ -770,9 +891,9 @@
       item.innerHTML = `
         <div class="hist-left">
           <span class="hist-day">${dayName}</span>
-          <span class="hist-date">${fmtDateShort(entradaDate)}</span>
+          <span class="hist-date">${fmtDateShort(refDate)}</span>
           <span class="hist-times">
-            <span>${fmtTime(r.entradaRounded)}</span>
+            ${entradaHtml}
             <span class="sep">→</span>
             ${salidaHtml}
           </span>
@@ -788,7 +909,9 @@
 
   function render(){
     renderConnBadge();
-    renderStatus();
+    renderEstadoBox();
+    renderBotones();
+    renderStatusRow();
     renderWeekSummary();
     renderHistory();
   }
