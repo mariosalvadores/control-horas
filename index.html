@@ -19,6 +19,7 @@
     --verde-ingreso-dark:#155C40;
     --rojo-egreso:#B3452F;
     --rojo-egreso-dark:#8F3524;
+    --ambar:#B7791F;
     --radius-lg:18px;
     --radius-md:12px;
     --shadow:0 2px 10px rgba(14,42,71,0.08);
@@ -50,6 +51,7 @@
     border-radius:0 0 24px 24px;
     margin-bottom:18px;
     box-shadow:var(--shadow-lg);
+    position:relative;
   }
   header.top .eyebrow{
     font-size:12px;
@@ -77,6 +79,28 @@
     margin-top:6px;
     text-transform:capitalize;
   }
+
+  /* CONNECTION BADGE */
+  .conn-badge{
+    position:absolute;
+    top:18px;
+    right:18px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    padding:6px 11px;
+    border-radius:999px;
+    background:rgba(255,255,255,0.08);
+    font-size:11px;
+    font-weight:600;
+    color:#E4ECF3;
+  }
+  .conn-dot{
+    width:7px;height:7px;border-radius:50%;
+    background:#3FCB8E;
+  }
+  .conn-badge.offline .conn-dot{background:#E0A93F;}
+  .conn-badge.offline{color:#F3DFAF;}
 
   /* STATUS PILL */
   .status-row{
@@ -235,6 +259,7 @@
   }
   .hist-times .sep{color:var(--gris-texto);}
   .hist-times .pending{color:var(--rojo-egreso);font-style:italic;font-family:'Inter',sans-serif;font-size:11.5px;}
+  .hist-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;}
   .hist-hours{
     font-family:'JetBrains Mono',monospace;
     font-size:14px;
@@ -245,6 +270,15 @@
     border-radius:8px;
     white-space:nowrap;
   }
+  .sync-tag{
+    font-size:10px;
+    font-weight:600;
+    display:flex;
+    align-items:center;
+    gap:3px;
+  }
+  .sync-tag.synced{color:var(--verde-ingreso-dark);}
+  .sync-tag.pending{color:var(--ambar);}
   .empty-state{
     text-align:center;
     padding:28px 10px;
@@ -256,6 +290,10 @@
   .footer-actions{
     text-align:center;
     margin-top:8px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    align-items:center;
   }
   .footer-actions button{
     background:none;
@@ -267,6 +305,11 @@
     font-family:inherit;
   }
   .footer-actions button:hover{color:var(--rojo-egreso);}
+  .footer-actions .sync-btn{
+    text-decoration:none;
+    color:var(--azul-claro);
+    font-weight:600;
+  }
 
   .toast{
     position:fixed;
@@ -285,11 +328,20 @@
     pointer-events:none;
     z-index:100;
     white-space:nowrap;
+    max-width:90vw;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    display:flex;
+    align-items:center;
+    gap:8px;
   }
   .toast.show{
     opacity:1;
     transform:translateX(-50%) translateY(0);
   }
+  .toast.success{background:var(--verde-ingreso-dark);}
+  .toast.warning{background:var(--ambar);}
+  .toast.error{background:var(--rojo-egreso-dark);}
 
   @media (max-width:360px){
     .clock{font-size:28px;}
@@ -301,6 +353,10 @@
 
 <div class="app">
   <header class="top">
+    <div class="conn-badge" id="connBadge">
+      <span class="conn-dot"></span>
+      <span id="connText">En línea</span>
+    </div>
     <div class="eyebrow">Control de asistencia</div>
     <h1>Ingreso y Egreso</h1>
     <div class="clock" id="clock">00:00:00</div>
@@ -336,11 +392,12 @@
 
   <div class="card">
     <h2>Historial de la semana</h2>
-    <div class="card-sub">Día, entrada, salida y horas calculadas (redondeo a 15 min)</div>
+    <div class="card-sub">Día, entrada, salida, horas calculadas y estado de sincronización</div>
     <div id="historyList"></div>
   </div>
 
   <div class="footer-actions">
+    <button class="sync-btn" id="btnForceSync">Reintentar sincronización pendiente</button>
     <button id="btnReset">Borrar todos los registros</button>
   </div>
 </div>
@@ -352,8 +409,10 @@
   "use strict";
 
   const STORAGE_KEY = "control_ingreso_egreso_v1";
+  // URL de tu Google Apps Script (Web App) desplegado con acceso "Cualquier usuario"
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbwsI91SVLrgUkHX0VCIXGlo0SnWbtdJ88k5DuBEF3Q7qJxofwbJGeOVW8yrp5IpNGC9rw/exec";
+
   const DIAS = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
-  const DIAS_CORTO = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
 
   // ---------- Storage ----------
   function loadRecords(){
@@ -396,6 +455,14 @@
     return `${hh}:${mm}`;
   }
 
+  function fmtTimeSec(date){
+    const d = new Date(date);
+    const hh = String(d.getHours()).padStart(2,"0");
+    const mm = String(d.getMinutes()).padStart(2,"0");
+    const ss = String(d.getSeconds()).padStart(2,"0");
+    return `${hh}:${mm}:${ss}`;
+  }
+
   function fmtDateShort(date){
     const d = new Date(date);
     return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`;
@@ -434,6 +501,74 @@
     return { start: monday, end: sunday };
   }
 
+  // ---------- Cloud sync (Google Sheets via Apps Script) ----------
+  // Google Apps Script Web Apps no siempre responden con cabeceras CORS legibles,
+  // así que usamos mode:'no-cors' y content-type 'text/plain' para evitar el preflight.
+  // No podemos leer el cuerpo de la respuesta, pero sí sabemos si la petición llegó a
+  // salir por la red (si falla, es porque no hay conexión o el navegador la bloqueó).
+  function enviarAGoogleSheets(payload){
+    return fetch(GAS_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    });
+  }
+
+  function intentarSincronizar(record, tipo){
+    // tipo: "entrada" | "salida"
+    if(!navigator.onLine){
+      showToast("Guardado localmente. Se sincronizará cuando haya conexión.", "warning");
+      return;
+    }
+
+    const entradaDate = new Date(record.entradaRaw);
+    const payload = {
+      id: record.id,
+      tipo: tipo === "entrada" ? "Ingreso" : "Egreso",
+      dia: DIAS[entradaDate.getDay()],
+      fecha: record.dateISO,
+      horaOriginal: tipo === "entrada" ? fmtTimeSec(record.entradaRaw) : fmtTimeSec(record.salidaRaw),
+      horaRedondeada: tipo === "entrada" ? fmtTime(record.entradaRounded) : fmtTime(record.salidaRounded),
+      timestampOriginal: tipo === "entrada" ? record.entradaRaw : record.salidaRaw,
+      timestampRedondeado: tipo === "entrada" ? record.entradaRounded : record.salidaRounded,
+      horasTotales: (tipo === "salida" && record.salidaRounded)
+        ? fmtHoursMin(hoursDecimal(new Date(record.entradaRounded).getTime(), new Date(record.salidaRounded).getTime()))
+        : ""
+    };
+
+    enviarAGoogleSheets(payload)
+      .then(() => {
+        // Con mode:'no-cors' no se puede leer el status real, pero si la promesa
+        // resuelve significa que la petición salió correctamente por la red.
+        if(tipo === "entrada"){ record.entradaSynced = true; } else { record.salidaSynced = true; }
+        saveRecords(records);
+        render();
+        showToast("Sincronizado con la nube ☁️", "success");
+      })
+      .catch((err) => {
+        console.error("Error de sincronización:", err);
+        if(tipo === "entrada"){ record.entradaSynced = false; } else { record.salidaSynced = false; }
+        saveRecords(records);
+        render();
+        showToast("Sin conexión. Se guardó local y se sincronizará luego.", "warning");
+      });
+  }
+
+  function reintentarPendientes(silencioso){
+    if(!navigator.onLine) return;
+    const pendientes = records.filter(r => !r.entradaSynced || (r.salidaRaw && !r.salidaSynced));
+    if(pendientes.length === 0){
+      if(!silencioso) showToast("No hay registros pendientes de sincronizar.", "success");
+      return;
+    }
+    if(!silencioso) showToast(`Sincronizando ${pendientes.length} registro(s) pendiente(s)...`, "warning");
+    pendientes.forEach(r => {
+      if(!r.entradaSynced) intentarSincronizar(r, "entrada");
+      if(r.salidaRaw && !r.salidaSynced) intentarSincronizar(r, "salida");
+    });
+  }
+
   // ---------- State logic ----------
   function getOpenSessionToday(){
     const todayISO = dateOnlyISO(new Date());
@@ -443,7 +578,7 @@
   function marcarIngreso(){
     const open = getOpenSessionToday();
     if(open){
-      showToast("Ya registraste un ingreso pendiente de egreso.");
+      showToast("Ya registraste un ingreso pendiente de egreso.", "warning");
       return;
     }
     const now = new Date();
@@ -453,39 +588,63 @@
       dateISO: dateOnlyISO(now),
       entradaRaw: now.toISOString(),
       entradaRounded: rounded.toISOString(),
+      entradaSynced: false,
       salidaRaw: null,
-      salidaRounded: null
+      salidaRounded: null,
+      salidaSynced: false
     };
+    // 1. Guardado local inmediato
     records.push(record);
     saveRecords(records);
     render();
-    showToast(`Ingreso registrado a las ${fmtTime(rounded)}`);
+    showToast(`Ingreso registrado a las ${fmtTime(rounded)}`, "success");
+
+    // 2. Envío en segundo plano a Google Sheets
+    intentarSincronizar(record, "entrada");
   }
 
   function marcarEgreso(){
     const open = getOpenSessionToday();
     if(!open){
-      showToast("No hay un ingreso activo para marcar egreso.");
+      showToast("No hay un ingreso activo para marcar egreso.", "warning");
       return;
     }
     const now = new Date();
     const rounded = roundToNearest15(now);
     open.salidaRaw = now.toISOString();
     open.salidaRounded = rounded.toISOString();
+    open.salidaSynced = false;
+
+    // 1. Guardado local inmediato
     saveRecords(records);
     render();
-    showToast(`Egreso registrado a las ${fmtTime(rounded)}`);
+    showToast(`Egreso registrado a las ${fmtTime(rounded)}`, "success");
+
+    // 2. Envío en segundo plano a Google Sheets
+    intentarSincronizar(open, "salida");
   }
 
   function resetAll(){
-    if(!confirm("¿Seguro que deseas borrar todos los registros guardados? Esta acción no se puede deshacer.")) return;
+    if(!confirm("¿Seguro que deseas borrar todos los registros guardados localmente? Esta acción no se puede deshacer (no borra la hoja de cálculo).")) return;
     records = [];
     saveRecords(records);
     render();
-    showToast("Registros eliminados");
+    showToast("Registros locales eliminados", "success");
   }
 
   // ---------- Rendering ----------
+  function renderConnBadge(){
+    const badge = document.getElementById("connBadge");
+    const text = document.getElementById("connText");
+    if(navigator.onLine){
+      badge.classList.remove("offline");
+      text.textContent = "En línea";
+    } else {
+      badge.classList.add("offline");
+      text.textContent = "Sin conexión";
+    }
+  }
+
   function renderStatus(){
     const open = getOpenSessionToday();
     const dot = document.getElementById("statusDot");
@@ -603,6 +762,11 @@
         ? fmtHoursMin(hoursDecimal(new Date(r.entradaRounded).getTime(), new Date(r.salidaRounded).getTime()))
         : "—";
 
+      const totalmenteSincronizado = r.entradaSynced && (r.salidaRaw ? r.salidaSynced : true);
+      const syncHtml = totalmenteSincronizado
+        ? `<span class="sync-tag synced">☁️ Sincronizado</span>`
+        : `<span class="sync-tag pending">⏳ Pendiente</span>`;
+
       item.innerHTML = `
         <div class="hist-left">
           <span class="hist-day">${dayName}</span>
@@ -613,13 +777,17 @@
             ${salidaHtml}
           </span>
         </div>
-        <div class="hist-hours">${horasHtml}</div>
+        <div class="hist-right">
+          <div class="hist-hours">${horasHtml}</div>
+          ${syncHtml}
+        </div>
       `;
       container.appendChild(item);
     });
   }
 
   function render(){
+    renderConnBadge();
     renderStatus();
     renderWeekSummary();
     renderHistory();
@@ -640,25 +808,42 @@
 
   // ---------- Toast ----------
   let toastTimer = null;
-  function showToast(msg){
+  function showToast(msg, type){
     const toast = document.getElementById("toast");
     toast.textContent = msg;
-    toast.classList.add("show");
+    toast.className = "toast show" + (type ? (" " + type) : "");
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove("show"), 2600);
+    toastTimer = setTimeout(() => toast.classList.remove("show"), 3000);
   }
 
   // ---------- Init ----------
   document.getElementById("btnIngreso").addEventListener("click", marcarIngreso);
   document.getElementById("btnEgreso").addEventListener("click", marcarEgreso);
   document.getElementById("btnReset").addEventListener("click", resetAll);
+  document.getElementById("btnForceSync").addEventListener("click", () => reintentarPendientes(false));
+
+  window.addEventListener("online", () => {
+    render();
+    showToast("Conexión recuperada. Sincronizando pendientes...", "warning");
+    reintentarPendientes(true);
+  });
+  window.addEventListener("offline", () => {
+    render();
+    showToast("Sin conexión a internet. Los registros se guardan localmente.", "warning");
+  });
 
   tickClock();
   setInterval(tickClock, 1000);
   render();
 
-  // Re-render at midnight rollover / periodically to keep week view fresh
-  setInterval(render, 60000);
+  // Reintenta sincronizar pendientes al abrir la app (por si quedaron sin enviar)
+  reintentarPendientes(true);
+
+  // Reintento periódico silencioso cada 60s + refresco de vista semanal
+  setInterval(() => {
+    render();
+    reintentarPendientes(true);
+  }, 60000);
 
 })();
 </script>
