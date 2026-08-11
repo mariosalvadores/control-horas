@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Control de Ingreso y Egreso</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --azul-oscuro:#0E2A47;
+    --azul-medio:#15436E;
+    --azul-claro:#2E6DA4;
+    --gris-claro:#F2F5F8;
+    --gris-borde:#DCE3EA;
+    --gris-texto:#5C6B7A;
+    --blanco:#FFFFFF;
+    --verde-ingreso:#1D7A55;
+    --verde-ingreso-dark:#155C40;
+    --rojo-egreso:#B3452F;
+    --rojo-egreso-dark:#8F3524;
+    --radius-lg:18px;
+    --radius-md:12px;
+    --shadow:0 2px 10px rgba(14,42,71,0.08);
+    --shadow-lg:0 8px 24px rgba(14,42,71,0.14);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    background:var(--gris-claro);
+    color:var(--azul-oscuro);
+    min-height:100vh;
+    padding-bottom:40px;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .app{
+    max-width:480px;
+    margin:0 auto;
+    padding:0 16px;
+  }
+
+  /* HEADER */
+  header.top{
+    background:var(--azul-oscuro);
+    color:var(--blanco);
+    padding:22px 20px 26px;
+    border-radius:0 0 24px 24px;
+    margin-bottom:18px;
+    box-shadow:var(--shadow-lg);
+  }
+  header.top .eyebrow{
+    font-size:12px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:#9DB4CC;
+    font-weight:600;
+    margin-bottom:6px;
+  }
+  header.top h1{
+    margin:0 0 14px;
+    font-size:20px;
+    font-weight:700;
+  }
+  .clock{
+    font-family:'JetBrains Mono',monospace;
+    font-size:34px;
+    font-weight:700;
+    letter-spacing:1px;
+    line-height:1;
+  }
+  .clock-date{
+    font-size:13px;
+    color:#B9CBDC;
+    margin-top:6px;
+    text-transform:capitalize;
+  }
+
+  /* STATUS PILL */
+  .status-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-top:16px;
+    padding:10px 14px;
+    background:rgba(255,255,255,0.08);
+    border-radius:999px;
+    width:fit-content;
+  }
+  .status-dot{
+    width:9px;height:9px;border-radius:50%;
+    background:#6C7E90;
+    flex-shrink:0;
+  }
+  .status-dot.active{
+    background:#3FCB8E;
+    box-shadow:0 0 0 4px rgba(63,203,142,0.25);
+  }
+  .status-row span{font-size:13px;color:#E4ECF3;font-weight:500;}
+
+  /* MAIN BUTTONS */
+  .punch-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+    margin-bottom:18px;
+  }
+  .punch-btn{
+    border:none;
+    border-radius:var(--radius-lg);
+    padding:22px 12px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+    font-family:inherit;
+    cursor:pointer;
+    transition:transform .12s ease, box-shadow .12s ease, opacity .2s ease;
+    box-shadow:var(--shadow);
+    color:var(--blanco);
+  }
+  .punch-btn:active{transform:scale(0.96);}
+  .punch-btn:disabled{
+    opacity:0.45;
+    cursor:not-allowed;
+    transform:none;
+  }
+  .punch-btn.ingreso{
+    background:linear-gradient(160deg,var(--verde-ingreso),var(--verde-ingreso-dark));
+  }
+  .punch-btn.egreso{
+    background:linear-gradient(160deg,var(--rojo-egreso),var(--rojo-egreso-dark));
+  }
+  .punch-btn .icon{font-size:26px;line-height:1;}
+  .punch-btn .label{font-size:15px;font-weight:700;letter-spacing:.3px;}
+  .punch-btn .sub{font-size:11px;opacity:.85;font-weight:500;}
+
+  /* CARDS */
+  .card{
+    background:var(--blanco);
+    border-radius:var(--radius-lg);
+    padding:18px;
+    box-shadow:var(--shadow);
+    margin-bottom:16px;
+    border:1px solid var(--gris-borde);
+  }
+  .card h2{
+    margin:0 0 4px;
+    font-size:14px;
+    font-weight:700;
+    color:var(--azul-oscuro);
+    text-transform:uppercase;
+    letter-spacing:0.6px;
+  }
+  .card .card-sub{
+    font-size:12px;
+    color:var(--gris-texto);
+    margin-bottom:14px;
+  }
+
+  /* WEEKLY SUMMARY */
+  .summary-main{
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+    margin-bottom:14px;
+  }
+  .summary-main .big{
+    font-family:'JetBrains Mono',monospace;
+    font-size:38px;
+    font-weight:700;
+    color:var(--azul-oscuro);
+  }
+  .summary-main .unit{
+    font-size:14px;
+    color:var(--gris-texto);
+    font-weight:600;
+  }
+  .week-bars{
+    display:flex;
+    gap:6px;
+    align-items:flex-end;
+    height:64px;
+    padding-top:6px;
+    border-top:1px solid var(--gris-borde);
+  }
+  .day-bar-wrap{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-end;
+    height:100%;
+    gap:6px;
+  }
+  .day-bar{
+    width:100%;
+    max-width:22px;
+    background:var(--gris-borde);
+    border-radius:5px 5px 2px 2px;
+    min-height:4px;
+    transition:height .3s ease;
+  }
+  .day-bar.has-hours{background:var(--azul-claro);}
+  .day-bar.today{background:var(--azul-oscuro);}
+  .day-label{
+    font-size:10px;
+    color:var(--gris-texto);
+    font-weight:600;
+    text-transform:uppercase;
+  }
+
+  /* HISTORY */
+  .history-item{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:12px 0;
+    border-bottom:1px solid var(--gris-borde);
+    gap:10px;
+  }
+  .history-item:last-child{border-bottom:none;}
+  .hist-left{display:flex;flex-direction:column;gap:2px;}
+  .hist-day{font-size:13px;font-weight:700;color:var(--azul-oscuro);text-transform:capitalize;}
+  .hist-date{font-size:11px;color:var(--gris-texto);}
+  .hist-times{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12.5px;
+    color:var(--azul-medio);
+    display:flex;
+    gap:6px;
+    align-items:center;
+  }
+  .hist-times .sep{color:var(--gris-texto);}
+  .hist-times .pending{color:var(--rojo-egreso);font-style:italic;font-family:'Inter',sans-serif;font-size:11.5px;}
+  .hist-hours{
+    font-family:'JetBrains Mono',monospace;
+    font-size:14px;
+    font-weight:700;
+    color:var(--verde-ingreso-dark);
+    background:#E7F4EE;
+    padding:4px 9px;
+    border-radius:8px;
+    white-space:nowrap;
+  }
+  .empty-state{
+    text-align:center;
+    padding:28px 10px;
+    color:var(--gris-texto);
+    font-size:13px;
+  }
+  .empty-state .icon{font-size:28px;display:block;margin-bottom:8px;}
+
+  .footer-actions{
+    text-align:center;
+    margin-top:8px;
+  }
+  .footer-actions button{
+    background:none;
+    border:none;
+    color:var(--gris-texto);
+    font-size:12px;
+    text-decoration:underline;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .footer-actions button:hover{color:var(--rojo-egreso);}
+
+  .toast{
+    position:fixed;
+    bottom:20px;
+    left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--azul-oscuro);
+    color:var(--blanco);
+    padding:12px 20px;
+    border-radius:999px;
+    font-size:13px;
+    font-weight:600;
+    box-shadow:var(--shadow-lg);
+    opacity:0;
+    transition:opacity .25s ease, transform .25s ease;
+    pointer-events:none;
+    z-index:100;
+    white-space:nowrap;
+  }
+  .toast.show{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
+  }
+
+  @media (max-width:360px){
+    .clock{font-size:28px;}
+    .summary-main .big{font-size:32px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="top">
+    <div class="eyebrow">Control de asistencia</div>
+    <h1>Ingreso y Egreso</h1>
+    <div class="clock" id="clock">00:00:00</div>
+    <div class="clock-date" id="clockDate">-</div>
+    <div class="status-row">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">Sin marcar hoy</span>
+    </div>
+  </header>
+
+  <div class="punch-grid">
+    <button class="punch-btn ingreso" id="btnIngreso">
+      <span class="icon">&#8594;</span>
+      <span class="label">INGRESO</span>
+      <span class="sub" id="subIngreso">Marcar entrada</span>
+    </button>
+    <button class="punch-btn egreso" id="btnEgreso" disabled>
+      <span class="icon">&#8592;</span>
+      <span class="label">EGRESO</span>
+      <span class="sub" id="subEgreso">Marcar salida</span>
+    </button>
+  </div>
+
+  <div class="card">
+    <h2>Resumen semanal</h2>
+    <div class="card-sub" id="weekRangeLabel">-</div>
+    <div class="summary-main">
+      <span class="big" id="weekTotal">0:00</span>
+      <span class="unit">horas trabajadas</span>
+    </div>
+    <div class="week-bars" id="weekBars"></div>
+  </div>
+
+  <div class="card">
+    <h2>Historial de la semana</h2>
+    <div class="card-sub">Día, entrada, salida y horas calculadas (redondeo a 15 min)</div>
+    <div id="historyList"></div>
+  </div>
+
+  <div class="footer-actions">
+    <button id="btnReset">Borrar todos los registros</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  const STORAGE_KEY = "control_ingreso_egreso_v1";
+  const DIAS = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+  const DIAS_CORTO = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+
+  // ---------- Storage ----------
+  function loadRecords(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    }catch(e){
+      console.error("Error leyendo localStorage", e);
+      return [];
+    }
+  }
+  function saveRecords(records){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+  }
+
+  let records = loadRecords();
+
+  // ---------- Time helpers ----------
+  function roundToNearest15(date){
+    const d = new Date(date.getTime());
+    const minutes = d.getMinutes();
+    const remainder = minutes % 15;
+    let roundedMinutes;
+    if(remainder < 7.5){
+      roundedMinutes = minutes - remainder;
+    } else {
+      roundedMinutes = minutes + (15 - remainder);
+    }
+    d.setMinutes(roundedMinutes);
+    d.setSeconds(0);
+    d.setMilliseconds(0);
+    return d;
+  }
+
+  function fmtTime(date){
+    if(!date) return "--:--";
+    const d = new Date(date);
+    const hh = String(d.getHours()).padStart(2,"0");
+    const mm = String(d.getMinutes()).padStart(2,"0");
+    return `${hh}:${mm}`;
+  }
+
+  function fmtDateShort(date){
+    const d = new Date(date);
+    return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`;
+  }
+
+  function dateOnlyISO(date){
+    const d = new Date(date);
+    d.setHours(0,0,0,0);
+    return d.toISOString().slice(0,10);
+  }
+
+  function hoursDecimal(entradaMs, salidaMs){
+    if(!entradaMs || !salidaMs) return 0;
+    const diff = salidaMs - entradaMs;
+    return diff > 0 ? diff / (1000*60*60) : 0;
+  }
+
+  function fmtHoursMin(decimalHours){
+    const totalMinutes = Math.round(decimalHours * 60);
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    return `${h}:${String(m).padStart(2,"0")}`;
+  }
+
+  // Monday-Sunday week range containing "date"
+  function getWeekRange(date){
+    const d = new Date(date);
+    d.setHours(0,0,0,0);
+    const day = d.getDay(); // 0 = domingo
+    const diffToMonday = (day === 0) ? -6 : 1 - day;
+    const monday = new Date(d);
+    monday.setDate(d.getDate() + diffToMonday);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23,59,59,999);
+    return { start: monday, end: sunday };
+  }
+
+  // ---------- State logic ----------
+  function getOpenSessionToday(){
+    const todayISO = dateOnlyISO(new Date());
+    return records.find(r => r.dateISO === todayISO && r.salidaRaw === null) || null;
+  }
+
+  function marcarIngreso(){
+    const open = getOpenSessionToday();
+    if(open){
+      showToast("Ya registraste un ingreso pendiente de egreso.");
+      return;
+    }
+    const now = new Date();
+    const rounded = roundToNearest15(now);
+    const record = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+      dateISO: dateOnlyISO(now),
+      entradaRaw: now.toISOString(),
+      entradaRounded: rounded.toISOString(),
+      salidaRaw: null,
+      salidaRounded: null
+    };
+    records.push(record);
+    saveRecords(records);
+    render();
+    showToast(`Ingreso registrado a las ${fmtTime(rounded)}`);
+  }
+
+  function marcarEgreso(){
+    const open = getOpenSessionToday();
+    if(!open){
+      showToast("No hay un ingreso activo para marcar egreso.");
+      return;
+    }
+    const now = new Date();
+    const rounded = roundToNearest15(now);
+    open.salidaRaw = now.toISOString();
+    open.salidaRounded = rounded.toISOString();
+    saveRecords(records);
+    render();
+    showToast(`Egreso registrado a las ${fmtTime(rounded)}`);
+  }
+
+  function resetAll(){
+    if(!confirm("¿Seguro que deseas borrar todos los registros guardados? Esta acción no se puede deshacer.")) return;
+    records = [];
+    saveRecords(records);
+    render();
+    showToast("Registros eliminados");
+  }
+
+  // ---------- Rendering ----------
+  function renderStatus(){
+    const open = getOpenSessionToday();
+    const dot = document.getElementById("statusDot");
+    const text = document.getElementById("statusText");
+    const btnIngreso = document.getElementById("btnIngreso");
+    const btnEgreso = document.getElementById("btnEgreso");
+    const subIngreso = document.getElementById("subIngreso");
+    const subEgreso = document.getElementById("subEgreso");
+
+    if(open){
+      dot.classList.add("active");
+      text.textContent = `Ingresaste a las ${fmtTime(open.entradaRounded)}`;
+      btnIngreso.disabled = true;
+      btnEgreso.disabled = false;
+      subIngreso.textContent = "Ya marcado";
+      subEgreso.textContent = "Marcar salida";
+    } else {
+      dot.classList.remove("active");
+      const todayISO = dateOnlyISO(new Date());
+      const todaysClosed = records.filter(r => r.dateISO === todayISO && r.salidaRaw !== null);
+      if(todaysClosed.length > 0){
+        text.textContent = "Jornada de hoy completada";
+      } else {
+        text.textContent = "Sin marcar hoy";
+      }
+      btnIngreso.disabled = false;
+      btnEgreso.disabled = true;
+      subIngreso.textContent = "Marcar entrada";
+      subEgreso.textContent = "Marcar salida";
+    }
+  }
+
+  function renderWeekSummary(){
+    const { start, end } = getWeekRange(new Date());
+    const weekRecords = records.filter(r => {
+      const rd = new Date(r.entradaRaw);
+      return rd >= start && rd <= end;
+    });
+
+    document.getElementById("weekRangeLabel").textContent =
+      `${fmtDateShort(start)} — ${fmtDateShort(end)}`;
+
+    let totalHours = 0;
+    const perDay = [0,0,0,0,0,0,0]; // index 0=lunes ... 6=domingo
+
+    weekRecords.forEach(r => {
+      if(r.salidaRounded){
+        const h = hoursDecimal(new Date(r.entradaRounded).getTime(), new Date(r.salidaRounded).getTime());
+        totalHours += h;
+        const jsDay = new Date(r.entradaRaw).getDay(); // 0=domingo
+        const idx = (jsDay === 0) ? 6 : jsDay - 1;
+        perDay[idx] += h;
+      }
+    });
+
+    document.getElementById("weekTotal").textContent = fmtHoursMin(totalHours);
+
+    const maxH = Math.max(...perDay, 1);
+    const barsContainer = document.getElementById("weekBars");
+    barsContainer.innerHTML = "";
+    const labels = ["L","M","X","J","V","S","D"];
+    const todayIdx = (function(){
+      const jsDay = new Date().getDay();
+      return (jsDay === 0) ? 6 : jsDay - 1;
+    })();
+
+    perDay.forEach((h, idx) => {
+      const wrap = document.createElement("div");
+      wrap.className = "day-bar-wrap";
+      const bar = document.createElement("div");
+      const heightPct = h > 0 ? Math.max(8, (h / maxH) * 100) : 4;
+      bar.style.height = heightPct + "%";
+      bar.className = "day-bar" + (h > 0 ? " has-hours" : "") + (idx === todayIdx ? " today" : "");
+      const label = document.createElement("div");
+      label.className = "day-label";
+      label.textContent = labels[idx];
+      wrap.appendChild(bar);
+      wrap.appendChild(label);
+      barsContainer.appendChild(wrap);
+    });
+  }
+
+  function renderHistory(){
+    const { start, end } = getWeekRange(new Date());
+    const weekRecords = records
+      .filter(r => {
+        const rd = new Date(r.entradaRaw);
+        return rd >= start && rd <= end;
+      })
+      .sort((a,b) => new Date(b.entradaRaw) - new Date(a.entradaRaw));
+
+    const container = document.getElementById("historyList");
+    container.innerHTML = "";
+
+    if(weekRecords.length === 0){
+      container.innerHTML = `
+        <div class="empty-state">
+          <span class="icon">&#128203;</span>
+          Todavía no hay registros esta semana.<br>Marcá tu ingreso para comenzar.
+        </div>`;
+      return;
+    }
+
+    weekRecords.forEach(r => {
+      const entradaDate = new Date(r.entradaRaw);
+      const dayName = DIAS[entradaDate.getDay()];
+      const item = document.createElement("div");
+      item.className = "history-item";
+
+      const salidaHtml = r.salidaRounded
+        ? `<span>${fmtTime(r.salidaRounded)}</span>`
+        : `<span class="pending">en curso</span>`;
+
+      const horasHtml = r.salidaRounded
+        ? fmtHoursMin(hoursDecimal(new Date(r.entradaRounded).getTime(), new Date(r.salidaRounded).getTime()))
+        : "—";
+
+      item.innerHTML = `
+        <div class="hist-left">
+          <span class="hist-day">${dayName}</span>
+          <span class="hist-date">${fmtDateShort(entradaDate)}</span>
+          <span class="hist-times">
+            <span>${fmtTime(r.entradaRounded)}</span>
+            <span class="sep">→</span>
+            ${salidaHtml}
+          </span>
+        </div>
+        <div class="hist-hours">${horasHtml}</div>
+      `;
+      container.appendChild(item);
+    });
+  }
+
+  function render(){
+    renderStatus();
+    renderWeekSummary();
+    renderHistory();
+  }
+
+  // ---------- Clock ----------
+  function tickClock(){
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2,"0");
+    const mm = String(now.getMinutes()).padStart(2,"0");
+    const ss = String(now.getSeconds()).padStart(2,"0");
+    document.getElementById("clock").textContent = `${hh}:${mm}:${ss}`;
+
+    const dayName = DIAS[now.getDay()];
+    const dateStr = `${dayName}, ${now.getDate()} de ${now.toLocaleString('es-ES', { month: 'long' })}`;
+    document.getElementById("clockDate").textContent = dateStr;
+  }
+
+  // ---------- Toast ----------
+  let toastTimer = null;
+  function showToast(msg){
+    const toast = document.getElementById("toast");
+    toast.textContent = msg;
+    toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove("show"), 2600);
+  }
+
+  // ---------- Init ----------
+  document.getElementById("btnIngreso").addEventListener("click", marcarIngreso);
+  document.getElementById("btnEgreso").addEventListener("click", marcarEgreso);
+  document.getElementById("btnReset").addEventListener("click", resetAll);
+
+  tickClock();
+  setInterval(tickClock, 1000);
+  render();
+
+  // Re-render at midnight rollover / periodically to keep week view fresh
+  setInterval(render, 60000);
+
+})();
+</script>
+</body>
+</html>
