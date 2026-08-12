@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<link rel="icon" href="favicon.png" type="image/png">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Control de Ingreso y Egreso</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230E2A47'/%3E%3Ccircle cx='32' cy='34' r='18' fill='none' stroke='white' stroke-width='4'/%3E%3Cpath d='M32 24 V34 L40 40' stroke='white' stroke-width='4' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Ccircle cx='48' cy='16' r='7' fill='%231D7A55'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
@@ -142,7 +142,6 @@
     font-size:12px;font-weight:600;padding:10px 12px;border-radius:10px;margin-bottom:12px;
   }
 
-  /* SEMANAS (accordion) */
   .week-details{border:1px solid var(--gris-borde);border-radius:var(--radius-md);margin-bottom:10px;overflow:hidden;}
   .week-details:last-child{margin-bottom:0;}
   .week-details summary{
@@ -160,10 +159,6 @@
   }
   .week-sessions{padding:6px 14px 4px;}
 
-  .summary-main{display:flex;align-items:baseline;gap:8px;margin:10px 0 14px;}
-  .summary-main .big{font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:700;color:var(--azul-oscuro);}
-  .summary-main .unit{font-size:13px;color:var(--gris-texto);font-weight:600;}
-
   .history-item{
     display:flex;justify-content:space-between;align-items:center;
     padding:11px 0;border-bottom:1px solid var(--gris-borde);gap:10px;
@@ -174,10 +169,16 @@
   .hist-date{font-size:11px;color:var(--gris-texto);}
   .hist-times{
     font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--azul-medio);
-    display:flex;gap:6px;align-items:center;
+    display:flex;gap:4px;align-items:center;flex-wrap:wrap;
   }
-  .hist-times .sep{color:var(--gris-texto);}
+  .hist-times .sep{color:var(--gris-texto);font-family:'Inter',sans-serif;}
   .hist-times .pending{color:var(--rojo-egreso);font-style:italic;font-family:'Inter',sans-serif;font-size:11.5px;}
+  .time-chip{display:inline-flex;align-items:center;gap:3px;}
+  .edit-btn{
+    border:none;background:none;cursor:pointer;font-size:11px;
+    padding:2px 3px;line-height:1;opacity:0.55;border-radius:5px;
+  }
+  .edit-btn:hover{opacity:1;background:var(--gris-claro);}
   .hist-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;}
   .hist-hours{
     font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;
@@ -212,9 +213,43 @@
   .toast.warning{background:var(--ambar);}
   .toast.error{background:var(--rojo-egreso-dark);}
 
+  /* MODAL DE EDICIÓN */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(14,42,71,0.55);
+    display:flex;align-items:center;justify-content:center;
+    padding:20px;z-index:200;opacity:0;pointer-events:none;transition:opacity .18s ease;
+  }
+  .modal-overlay.show{opacity:1;pointer-events:auto;}
+  .modal-box{
+    background:var(--blanco);border-radius:var(--radius-lg);padding:22px 20px;
+    width:100%;max-width:360px;box-shadow:var(--shadow-lg);
+    transform:translateY(10px);transition:transform .18s ease;
+  }
+  .modal-overlay.show .modal-box{transform:translateY(0);}
+  .modal-box h3{margin:0 0 2px;font-size:16px;color:var(--azul-oscuro);}
+  .modal-box .modal-sub{font-size:12px;color:var(--gris-texto);margin-bottom:16px;text-transform:capitalize;}
+  .modal-box label{font-size:12px;font-weight:600;color:var(--gris-texto);display:block;margin-bottom:6px;}
+  .modal-fields{display:grid;grid-template-columns:1.2fr 1fr;gap:10px;margin-bottom:6px;}
+  .modal-box input[type="time"],.modal-box input[type="date"]{
+    width:100%;padding:11px;font-size:16px;font-family:'JetBrains Mono',monospace;
+    border:1.5px solid var(--gris-borde);border-radius:10px;color:var(--azul-oscuro);
+    background:var(--gris-claro);
+  }
+  .modal-error{color:var(--rojo-egreso-dark);font-size:12px;font-weight:600;min-height:16px;margin:8px 0 4px;}
+  .modal-actions{display:flex;gap:10px;margin-top:6px;}
+  .modal-actions button{
+    flex:1;padding:12px;border-radius:10px;border:none;font-family:inherit;
+    font-weight:700;font-size:13px;cursor:pointer;
+  }
+  .modal-btn-cancel{background:var(--gris-claro);color:var(--gris-texto);}
+  .modal-btn-cancel:hover{background:var(--gris-borde);}
+  .modal-btn-guardar{background:var(--azul-oscuro);color:var(--blanco);}
+  .modal-btn-guardar:hover{background:var(--azul-medio);}
+  .modal-btn-guardar:disabled{opacity:0.6;cursor:not-allowed;}
+
   @media (max-width:360px){
     .clock{font-size:28px;}
-    .summary-main .big{font-size:28px;}
+    .modal-fields{grid-template-columns:1fr;}
   }
 </style>
 </head>
@@ -262,7 +297,7 @@
       <h2>Historial por semana</h2>
       <button class="refresh-btn" id="btnRefreshHist"><span class="refresh-icon">&#8635;</span>Actualizar</button>
     </div>
-    <div class="card-sub">Datos leídos directamente desde Google Sheets — iguales en todos los dispositivos</div>
+    <div class="card-sub">Tocá el ✏️ junto a una hora para corregir fecha y hora</div>
     <div class="fuente-nube" id="fuenteNube">Cargando historial de la nube...</div>
     <div id="conflictBanner"></div>
     <div id="weeksContainer">
@@ -278,19 +313,40 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- Modal de edición de fecha y hora -->
+<div class="modal-overlay" id="editModalOverlay">
+  <div class="modal-box">
+    <h3 id="editModalTitle">Editar registro</h3>
+    <div class="modal-sub" id="editModalSub">-</div>
+    <div class="modal-fields">
+      <div>
+        <label for="editModalDateInput">Fecha</label>
+        <input type="date" id="editModalDateInput">
+      </div>
+      <div>
+        <label for="editModalTimeInput">Hora</label>
+        <input type="time" id="editModalTimeInput" step="60">
+      </div>
+    </div>
+    <div class="modal-error" id="editModalError"></div>
+    <div class="modal-actions">
+      <button class="modal-btn-cancel" id="editModalCancel">Cancelar</button>
+      <button class="modal-btn-guardar" id="editModalGuardar">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
   "use strict";
 
   const STORAGE_KEY = "control_ingreso_egreso_marcas_v3";
-  // URL de tu Google Apps Script (Web App) — con doPost validado y doGet (estado + historial)
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbxolC6hn6Omu45duFQMK7aLCjaBKVSH1Kr8dFyd849wXrjrOE0fVkwtochQJBxohPcP0w/exec";
-  const POLL_ESTADO_MS = 20000;    // sondeo liviano de estado (botones)
-  const POLL_HISTORIAL_MS = 60000; // sondeo del historial completo (semanas)
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbzRknpyeR_Rcyr9JWnfjna_T2qC2TomcxJLo4a-me42QwAHp4rzXwBqAHBpzX1W7e8AyA/exec";
+  const POLL_ESTADO_MS = 20000;
+  const POLL_HISTORIAL_MS = 60000;
 
   const DIAS = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
 
-  // ---------- Storage local (solo respaldo de lo que este dispositivo generó) ----------
   function loadMarcas(){
     try{
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -299,18 +355,24 @@
   }
   function saveMarcas(marcas){ localStorage.setItem(STORAGE_KEY, JSON.stringify(marcas)); }
 
-  let marcas = loadMarcas(); // marcas propias de este dispositivo (con estado de sync)
+  let marcas = loadMarcas();
 
-  // Estado / datos autoritativos que vienen del servidor (Google Sheets)
-  let ultimoEstadoServidor = null;   // { tipo, timestamp, ... } | null   (sondeo liviano)
+  let ultimoEstadoServidor = null;
   let servidorVerificado = false;
   let ultimaVerificacionTs = null;
   let botonesCargando = false;
 
-  let historialServidor = [];        // array completo de marcas leídas de la hoja
+  let historialServidor = [];
   let historialCargado = false;
   let historialError = false;
   let actualizandoHistorial = false;
+
+  // Estado del modal de edición
+  let modalEditId = null;
+  let modalEditOrigen = null;       // "local" | "servidor"
+  let modalEditTipo = null;         // "Ingreso" | "Egreso"
+  let modalEditContraparteRaw = null; // ISO de la marca pareja (para validar consistencia)
+  let modalGuardando = false;
 
   // ---------- Time helpers ----------
   function roundToNearest15(date){
@@ -366,9 +428,6 @@
     return o.length ? o[o.length - 1] : null;
   }
 
-  // Combina lo que ya está confirmado en la hoja (historialServidor) con marcas
-  // propias de este dispositivo que TODAVÍA no llegaron a sincronizarse, para no
-  // perder de vista la acción más reciente aunque el servidor no la sepa todavía.
   function getMarcasCombinadas(){
     const idsServidor = new Set(historialServidor.map(m => m.id));
     const serverNorm = historialServidor.map(m => ({
@@ -388,8 +447,6 @@
   }
 
   function getEstadoActual(){
-    // Prioriza el sondeo liviano de estado (más frecuente); si hay una marca local
-    // pendiente más nueva que ese sondeo, esa manda (por si el sondeo aún no la vio).
     const candidatos = [];
     if(ultimoEstadoServidor && ultimoEstadoServidor.tipo){
       candidatos.push({ tipo: ultimoEstadoServidor.tipo, ts: new Date(ultimoEstadoServidor.timestamp || 0).getTime() });
@@ -403,7 +460,8 @@
     return candidatos[0].tipo === "Egreso" ? "fuera" : "trabajando";
   }
 
-  // Reconstruye sesiones (entrada+salida) emparejando Ingreso→Egreso en orden cronológico.
+  // Reconstruye sesiones (entrada+salida), guardando el ID individual de cada
+  // marca (entradaId / salidaId) porque cada una es una fila distinta en la hoja.
   function buildSesiones(marcasOrdenadas){
     const sesiones = [];
     let abierta = null;
@@ -411,19 +469,18 @@
       if(m.tipo === "Ingreso"){
         if(abierta) sesiones.push(abierta);
         abierta = {
-          id: m.id, dateISO: dateOnlyISO(m.raw),
-          entradaRaw: m.raw, entradaRounded: m.rounded, entradaSynced: m.synced,
-          salidaRaw: null, salidaRounded: null, salidaSynced: null
+          entradaId: m.id, entradaRaw: m.raw, entradaRounded: m.rounded, entradaSynced: m.synced,
+          salidaId: null, salidaRaw: null, salidaRounded: null, salidaSynced: null
         };
       } else {
         if(abierta){
+          abierta.salidaId = m.id;
           abierta.salidaRaw = m.raw; abierta.salidaRounded = m.rounded; abierta.salidaSynced = m.synced;
           sesiones.push(abierta); abierta = null;
         } else {
           sesiones.push({
-            id: m.id, dateISO: dateOnlyISO(m.raw),
-            entradaRaw: null, entradaRounded: null, entradaSynced: null,
-            salidaRaw: m.raw, salidaRounded: m.rounded, salidaSynced: m.synced
+            entradaId: null, entradaRaw: null, entradaRounded: null, entradaSynced: null,
+            salidaId: m.id, salidaRaw: m.raw, salidaRounded: m.rounded, salidaSynced: m.synced
           });
         }
       }
@@ -432,7 +489,6 @@
     return sesiones;
   }
 
-  // Agrupa las sesiones en semanas lunes-domingo y calcula el total de horas de cada una.
   function buildGruposSemanales(sesiones){
     const grupos = {};
     sesiones.forEach(s => {
@@ -469,16 +525,25 @@
     return res.json();
   }
 
+  async function editarMarcaEnServidor(id, nuevaFecha, horaEditada){
+    const res = await fetch(GAS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ accion: "editar", id, fecha: nuevaFecha, horaEditada })
+    });
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    return res.json(); // { status:"ok" } | { status:"error", motivo }
+  }
+
   async function consultarEstadoServidor(){
     const res = await fetch(`${GAS_URL}?action=estado&_=${Date.now()}`, { method:"GET", cache:"no-store" });
     if(!res.ok) throw new Error("HTTP " + res.status);
     return res.json();
   }
-
   async function consultarHistorialServidor(){
     const res = await fetch(`${GAS_URL}?action=historial&_=${Date.now()}`, { method:"GET", cache:"no-store" });
     if(!res.ok) throw new Error("HTTP " + res.status);
-    return res.json(); // array
+    return res.json();
   }
 
   async function actualizarEstadoDesdeServidor(silencioso){
@@ -497,20 +562,17 @@
   }
 
   async function actualizarHistorialDesdeServidor(silencioso){
-    actualizandoHistorial = true;
-    render();
+    actualizandoHistorial = true; render();
     try{
       const data = await consultarHistorialServidor();
       historialServidor = Array.isArray(data) ? data : [];
-      historialCargado = true;
-      historialError = false;
+      historialCargado = true; historialError = false;
     }catch(err){
       console.warn("No se pudo cargar el historial desde el servidor:", err);
       historialError = true;
       if(!silencioso) showToast("No se pudo cargar el historial desde Google Sheets.", "warning");
     }finally{
-      actualizandoHistorial = false;
-      render();
+      actualizandoHistorial = false; render();
     }
   }
 
@@ -539,7 +601,7 @@
     render();
   }
 
-  // ---------- Acciones de marcado (validadas por el servidor) ----------
+  // ---------- Acciones de marcado ----------
   function setBotonesCargando(loading){ botonesCargando = loading; render(); }
 
   async function marcarIngreso(){
@@ -608,10 +670,111 @@
 
   function resetAll(){
     if(!confirm("¿Borrar las marcas pendientes/locales de este dispositivo? Esto no afecta lo ya guardado en Google Sheets.")) return;
-    marcas = marcas.filter(m => m.synced === true); // conserva solo las ya confirmadas, por prolijidad
     marcas = [];
     saveMarcas(marcas); render();
     showToast("Marcas locales pendientes eliminadas", "success");
+  }
+
+  // ---------- Edición manual de fecha y hora ----------
+  function abrirModalEdicion(id, origen, tipoLabel, fechaISO, horaActual, fechaLabel, contraparteRaw){
+    modalEditId = id;
+    modalEditOrigen = origen;
+    modalEditTipo = tipoLabel;
+    modalEditContraparteRaw = contraparteRaw || null;
+
+    document.getElementById("editModalTitle").textContent = `Editar hora de ${tipoLabel}`;
+    document.getElementById("editModalSub").textContent = fechaLabel;
+    document.getElementById("editModalDateInput").value = fechaISO;
+    document.getElementById("editModalTimeInput").value = horaActual;
+    document.getElementById("editModalError").textContent = "";
+    document.getElementById("editModalOverlay").classList.add("show");
+  }
+  function cerrarModalEdicion(){
+    document.getElementById("editModalOverlay").classList.remove("show");
+    modalEditId = null; modalEditOrigen = null; modalEditTipo = null; modalEditContraparteRaw = null;
+  }
+  function mostrarErrorModal(msg){
+    document.getElementById("editModalError").textContent = msg;
+  }
+  function setModalGuardando(loading){
+    modalGuardando = loading;
+    const btn = document.getElementById("editModalGuardar");
+    btn.disabled = loading;
+    btn.textContent = loading ? "Guardando..." : "Guardar";
+  }
+
+  function editarMarcaLocal(id, nuevaFecha, horaEditada){
+    const m = marcas.find(x => x.id === id);
+    if(!m) return false;
+    const nuevoRaw = new Date(`${nuevaFecha}T${horaEditada}:00`);
+    const nuevoRounded = roundToNearest15(nuevoRaw);
+    m.raw = nuevoRaw.toISOString();
+    m.rounded = nuevoRounded.toISOString();
+    saveMarcas(marcas);
+    return true;
+  }
+
+  async function guardarEdicion(){
+    const nuevaFecha = document.getElementById("editModalDateInput").value; // YYYY-MM-DD
+    const nuevaHora = document.getElementById("editModalTimeInput").value;  // HH:MM
+
+    if(!nuevaFecha){ mostrarErrorModal("Ingresá una fecha válida."); return; }
+    if(!nuevaHora){ mostrarErrorModal("Ingresá una hora válida."); return; }
+
+    const nuevoMomento = new Date(`${nuevaFecha}T${nuevaHora}:00`);
+    if(isNaN(nuevoMomento.getTime())){ mostrarErrorModal("Fecha u hora inválida."); return; }
+
+    // Aviso (no bloqueante) si la corrección deja el ingreso/egreso en un orden
+    // inconsistente respecto de su contraparte de la misma sesión.
+    if(modalEditContraparteRaw){
+      const contraparte = new Date(modalEditContraparteRaw);
+      const inconsistente =
+        (modalEditTipo === "Ingreso" && nuevoMomento >= contraparte) ||
+        (modalEditTipo === "Egreso" && nuevoMomento <= contraparte);
+      if(inconsistente){
+        const seguir = confirm(
+          modalEditTipo === "Ingreso"
+            ? "La nueva fecha/hora de Ingreso es igual o posterior a la Salida de esa sesión. ¿Guardar igual?"
+            : "La nueva fecha/hora de Egreso es igual o anterior al Ingreso de esa sesión. ¿Guardar igual?"
+        );
+        if(!seguir) return;
+      }
+    }
+
+    if(modalEditOrigen === "local"){
+      const ok = editarMarcaLocal(modalEditId, nuevaFecha, nuevaHora);
+      if(ok){
+        cerrarModalEdicion();
+        showToast("Registro actualizado localmente. Se sincronizará con la nube.", "success");
+        render();
+        reintentarPendientes(true);
+      } else {
+        mostrarErrorModal("No se encontró el registro localmente.");
+      }
+      return;
+    }
+
+    setModalGuardando(true);
+    try{
+      const resp = await editarMarcaEnServidor(modalEditId, nuevaFecha, nuevaHora);
+      if(resp && resp.status === "ok"){
+        cerrarModalEdicion();
+        showToast("Registro corregido en Google Sheets ☁️", "success");
+        await actualizarHistorialDesdeServidor(true);
+        await actualizarEstadoDesdeServidor(true);
+      } else {
+        mostrarErrorModal(
+          resp && resp.motivo === "no_encontrado"
+            ? "No se encontró el registro en la hoja."
+            : "No se pudo actualizar. Intentá de nuevo."
+        );
+      }
+    }catch(err){
+      console.error(err);
+      mostrarErrorModal("Error de conexión. Verificá tu internet e intentá de nuevo.");
+    }finally{
+      setModalGuardando(false);
+    }
   }
 
   // ---------- Rendering ----------
@@ -634,7 +797,6 @@
       verif.textContent = "Confirmando con Google Sheets";
       return;
     }
-
     const estado = getEstadoActual();
     if(estado === "trabajando"){
       box.className = "estado-box trabajando"; emoji.textContent = "🟢";
@@ -643,7 +805,6 @@
       box.className = "estado-box fuera"; emoji.textContent = "🔴";
       texto.textContent = "Estado actual: Fuera del trabajo";
     }
-
     if(servidorVerificado){
       const seg = ultimaVerificacionTs ? Math.max(0, Math.round((Date.now() - ultimaVerificacionTs.getTime())/1000)) : null;
       verif.textContent = seg !== null ? `✔ Verificado con el servidor (hace ${seg}s)` : "✔ Verificado con el servidor";
@@ -699,7 +860,7 @@
     const cont = document.getElementById("conflictBanner");
     const conflictos = marcas.filter(m => m.synced === "conflict");
     if(conflictos.length === 0){ cont.innerHTML = ""; return; }
-    cont.innerHTML = `<div class="conflict-banner">⚠ ${conflictos.length} marca(s) de este dispositivo no se pudieron guardar porque ya existía una marca en conflicto registrada desde otro lugar. Revisá el estado actual antes de reintentar.</div>`;
+    cont.innerHTML = `<div class="conflict-banner">⚠ ${conflictos.length} marca(s) de este dispositivo no se pudieron guardar porque ya existía una marca en conflicto registrada desde otro lugar.</div>`;
   }
 
   function renderWeeks(){
@@ -726,6 +887,10 @@
     const { start: inicioSemanaActual } = getWeekRange(new Date());
     const keyActual = dateOnlyISO(inicioSemanaActual);
 
+    const abiertosPrevios = new Set(
+      [...container.querySelectorAll("details.week-details[open]")].map(d => d.dataset.key)
+    );
+
     container.innerHTML = "";
     grupos.forEach(g => {
       const key = dateOnlyISO(g.start);
@@ -733,7 +898,8 @@
 
       const details = document.createElement("details");
       details.className = "week-details";
-      if(esActual) details.open = true;
+      details.dataset.key = key;
+      details.open = abiertosPrevios.size > 0 ? abiertosPrevios.has(key) : esActual;
 
       const summary = document.createElement("summary");
       summary.innerHTML = `
@@ -757,8 +923,23 @@
         const refDate = new Date(ref);
         const dayName = DIAS[refDate.getDay()];
 
-        const entradaHtml = s.entradaRounded ? `<span>${fmtTime(s.entradaRounded)}</span>` : `<span class="pending">sin ingreso</span>`;
-        const salidaHtml = s.salidaRounded ? `<span>${fmtTime(s.salidaRounded)}</span>` : `<span class="pending">en curso</span>`;
+        const entradaFechaISO = s.entradaRaw ? dateOnlyISO(s.entradaRaw) : null;
+        const salidaFechaISO = s.salidaRaw ? dateOnlyISO(s.salidaRaw) : null;
+
+        const entradaHtml = s.entradaRounded
+          ? `<span class="time-chip">${fmtTime(s.entradaRounded)}${botonEditar(
+              s.entradaId, s.entradaSynced, "Ingreso", entradaFechaISO,
+              fmtTime(s.entradaRounded), `${dayName}, ${fmtDateShort(refDate)}`, s.salidaRaw
+            )}</span>`
+          : `<span class="pending">sin ingreso</span>`;
+
+        const salidaHtml = s.salidaRounded
+          ? `<span class="time-chip">${fmtTime(s.salidaRounded)}${botonEditar(
+              s.salidaId, s.salidaSynced, "Egreso", salidaFechaISO,
+              fmtTime(s.salidaRounded), `${DIAS[new Date(s.salidaRaw).getDay()]}, ${fmtDateShort(s.salidaRaw)}`, s.entradaRaw
+            )}</span>`
+          : `<span class="pending">en curso</span>`;
+
         const horasHtml = (s.entradaRounded && s.salidaRounded)
           ? fmtHoursMin(hoursDecimal(new Date(s.entradaRounded).getTime(), new Date(s.salidaRounded).getTime()))
           : "—";
@@ -788,6 +969,22 @@
       details.appendChild(sesionesDiv);
       container.appendChild(details);
     });
+
+    container.querySelectorAll(".edit-btn").forEach(btn => {
+      btn.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        const ds = btn.dataset;
+        abrirModalEdicion(ds.id, ds.origen, ds.tipo, ds.fechaiso, ds.hora, ds.fechalabel, ds.contraparte || null);
+      });
+    });
+  }
+
+  function botonEditar(id, synced, tipoLabel, fechaISO, horaActual, fechaLabel, contraparteRaw){
+    if(!id) return "";
+    const origen = synced === false ? "local" : "servidor";
+    return `<button class="edit-btn" data-id="${id}" data-origen="${origen}" data-tipo="${tipoLabel}"
+      data-fechaiso="${fechaISO}" data-hora="${horaActual}" data-fechalabel="${fechaLabel}"
+      data-contraparte="${contraparteRaw || ""}" title="Editar fecha y hora">✏️</button>`;
   }
 
   function render(){
@@ -826,6 +1023,12 @@
   document.getElementById("btnReset").addEventListener("click", resetAll);
   document.getElementById("btnForceSync").addEventListener("click", () => reintentarPendientes(false));
   document.getElementById("btnRefreshHist").addEventListener("click", () => actualizarHistorialDesdeServidor(false));
+
+  document.getElementById("editModalCancel").addEventListener("click", cerrarModalEdicion);
+  document.getElementById("editModalGuardar").addEventListener("click", guardarEdicion);
+  document.getElementById("editModalOverlay").addEventListener("click", (ev) => {
+    if(ev.target.id === "editModalOverlay" && !modalGuardando) cerrarModalEdicion();
+  });
 
   window.addEventListener("online", () => {
     render();
