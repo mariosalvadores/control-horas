@@ -39,11 +39,7 @@
     -webkit-font-smoothing:antialiased;
   }
 
-  .app{
-    max-width:480px;
-    margin:0 auto;
-    padding:0 16px;
-  }
+  .app{max-width:480px;margin:0 auto;padding:0 16px;}
 
   header.top{
     background:var(--azul-oscuro);
@@ -55,336 +51,169 @@
     position:relative;
   }
   header.top .eyebrow{
-    font-size:12px;
-    letter-spacing:1.5px;
-    text-transform:uppercase;
-    color:#9DB4CC;
-    font-weight:600;
-    margin-bottom:6px;
+    font-size:12px;letter-spacing:1.5px;text-transform:uppercase;
+    color:#9DB4CC;font-weight:600;margin-bottom:6px;
   }
-  header.top h1{
-    margin:0 0 14px;
-    font-size:20px;
-    font-weight:700;
-  }
-  .clock{
-    font-family:'JetBrains Mono',monospace;
-    font-size:34px;
-    font-weight:700;
-    letter-spacing:1px;
-    line-height:1;
-  }
-  .clock-date{
-    font-size:13px;
-    color:#B9CBDC;
-    margin-top:6px;
-    text-transform:capitalize;
-  }
+  header.top h1{margin:0 0 14px;font-size:20px;font-weight:700;}
+  .clock{font-family:'JetBrains Mono',monospace;font-size:34px;font-weight:700;letter-spacing:1px;line-height:1;}
+  .clock-date{font-size:13px;color:#B9CBDC;margin-top:6px;text-transform:capitalize;}
 
   .conn-badge{
-    position:absolute;
-    top:18px;
-    right:18px;
-    display:flex;
-    align-items:center;
-    gap:6px;
-    padding:6px 11px;
-    border-radius:999px;
+    position:absolute;top:18px;right:18px;
+    display:flex;align-items:center;gap:6px;
+    padding:6px 11px;border-radius:999px;
     background:rgba(255,255,255,0.08);
-    font-size:11px;
-    font-weight:600;
-    color:#E4ECF3;
+    font-size:11px;font-weight:600;color:#E4ECF3;
   }
-  .conn-dot{
-    width:7px;height:7px;border-radius:50%;
-    background:#3FCB8E;
-  }
+  .conn-dot{width:7px;height:7px;border-radius:50%;background:#3FCB8E;}
   .conn-badge.offline .conn-dot{background:#E0A93F;}
   .conn-badge.offline{color:#F3DFAF;}
 
   .status-row{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    margin-top:16px;
-    padding:10px 14px;
-    background:rgba(255,255,255,0.08);
-    border-radius:999px;
-    width:fit-content;
+    display:flex;align-items:center;gap:8px;margin-top:16px;
+    padding:10px 14px;background:rgba(255,255,255,0.08);
+    border-radius:999px;width:fit-content;
   }
-  .status-dot{
-    width:9px;height:9px;border-radius:50%;
-    background:#6C7E90;
-    flex-shrink:0;
-  }
-  .status-dot.active{
-    background:#3FCB8E;
-    box-shadow:0 0 0 4px rgba(63,203,142,0.25);
-  }
+  .status-dot{width:9px;height:9px;border-radius:50%;background:#6C7E90;flex-shrink:0;}
+  .status-dot.active{background:#3FCB8E;box-shadow:0 0 0 4px rgba(63,203,142,0.25);}
   .status-row span{font-size:13px;color:#E4ECF3;font-weight:500;}
 
   .estado-box{
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    gap:4px;
-    padding:14px 16px;
-    border-radius:var(--radius-md);
-    margin-bottom:14px;
-    border:2px solid transparent;
-    transition:background .2s ease, border-color .2s ease, color .2s ease;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+    padding:14px 16px;border-radius:var(--radius-md);margin-bottom:14px;
+    border:2px solid transparent;transition:background .2s ease, border-color .2s ease, color .2s ease;
   }
-  .estado-box .estado-linea{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    font-weight:700;
-    font-size:15px;
-  }
+  .estado-box .estado-linea{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;}
   .estado-box .estado-emoji{font-size:18px;}
-  .estado-box .estado-verificacion{
-    font-size:11px;
-    font-weight:600;
-    opacity:0.85;
-  }
-  .estado-box.trabajando{
-    background:#E7F4EE;
-    color:var(--verde-ingreso-dark);
-    border-color:var(--verde-ingreso);
-  }
-  .estado-box.fuera{
-    background:#FBEAE6;
-    color:var(--rojo-egreso-dark);
-    border-color:var(--rojo-egreso);
-  }
-  .estado-box.cargando{
-    background:#EEF2F6;
-    color:var(--gris-texto);
-    border-color:var(--gris-borde);
-  }
+  .estado-box .estado-verificacion{font-size:11px;font-weight:600;opacity:0.85;}
+  .estado-box.trabajando{background:#E7F4EE;color:var(--verde-ingreso-dark);border-color:var(--verde-ingreso);}
+  .estado-box.fuera{background:#FBEAE6;color:var(--rojo-egreso-dark);border-color:var(--rojo-egreso);}
+  .estado-box.cargando{background:#EEF2F6;color:var(--gris-texto);border-color:var(--gris-borde);}
 
-  .punch-grid{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:12px;
-    margin-bottom:18px;
-  }
+  .punch-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;}
   .punch-btn{
-    border:none;
-    border-radius:var(--radius-lg);
-    padding:22px 12px;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    gap:8px;
-    font-family:inherit;
-    cursor:pointer;
+    border:none;border-radius:var(--radius-lg);padding:22px 12px;
+    display:flex;flex-direction:column;align-items:center;gap:8px;
+    font-family:inherit;cursor:pointer;
     transition:transform .12s ease, box-shadow .12s ease, background .2s ease, color .2s ease;
-    box-shadow:var(--shadow);
-    color:var(--blanco);
+    box-shadow:var(--shadow);color:var(--blanco);
   }
   .punch-btn:active{transform:scale(0.96);}
-  .punch-btn.ingreso{
-    background:linear-gradient(160deg,var(--verde-ingreso),var(--verde-ingreso-dark));
-  }
-  .punch-btn.egreso{
-    background:linear-gradient(160deg,var(--rojo-egreso),var(--rojo-egreso-dark));
-  }
+  .punch-btn.ingreso{background:linear-gradient(160deg,var(--verde-ingreso),var(--verde-ingreso-dark));}
+  .punch-btn.egreso{background:linear-gradient(160deg,var(--rojo-egreso),var(--rojo-egreso-dark));}
   .punch-btn:disabled{
-    background:var(--gris-disabled-bg) !important;
-    color:var(--gris-disabled-txt) !important;
-    box-shadow:none;
-    opacity:1;
-    cursor:not-allowed;
-    transform:none;
-    pointer-events:none;
+    background:var(--gris-disabled-bg) !important;color:var(--gris-disabled-txt) !important;
+    box-shadow:none;opacity:1;cursor:not-allowed;transform:none;pointer-events:none;
   }
   .punch-btn .icon{font-size:26px;line-height:1;}
   .punch-btn .label{font-size:15px;font-weight:700;letter-spacing:.3px;}
   .punch-btn .sub{font-size:11px;opacity:.85;font-weight:500;}
 
   .card{
-    background:var(--blanco);
-    border-radius:var(--radius-lg);
-    padding:18px;
-    box-shadow:var(--shadow);
-    margin-bottom:16px;
-    border:1px solid var(--gris-borde);
+    background:var(--blanco);border-radius:var(--radius-lg);padding:18px;
+    box-shadow:var(--shadow);margin-bottom:16px;border:1px solid var(--gris-borde);
   }
+  .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
   .card h2{
-    margin:0 0 4px;
-    font-size:14px;
-    font-weight:700;
-    color:var(--azul-oscuro);
-    text-transform:uppercase;
-    letter-spacing:0.6px;
+    margin:0 0 4px;font-size:14px;font-weight:700;color:var(--azul-oscuro);
+    text-transform:uppercase;letter-spacing:0.6px;
   }
-  .card .card-sub{
-    font-size:12px;
-    color:var(--gris-texto);
-    margin-bottom:14px;
+  .card .card-sub{font-size:12px;color:var(--gris-texto);margin-bottom:6px;}
+  .refresh-btn{
+    background:var(--gris-claro);border:1px solid var(--gris-borde);
+    color:var(--azul-medio);font-size:11px;font-weight:600;
+    padding:6px 10px;border-radius:8px;cursor:pointer;
+    display:flex;align-items:center;gap:5px;font-family:inherit;
+  }
+  .refresh-btn:hover{background:var(--gris-borde);}
+  .refresh-btn.spinning .refresh-icon{animation:spin 0.8s linear infinite;}
+  @keyframes spin{from{transform:rotate(0);}to{transform:rotate(360deg);}}
+
+  .fuente-nube{
+    font-size:10.5px;color:var(--gris-texto);margin-bottom:10px;
+    display:flex;align-items:center;gap:5px;
+  }
+  .fuente-nube.ok{color:var(--verde-ingreso-dark);}
+  .fuente-nube.error{color:var(--rojo-egreso-dark);}
+
+  .conflict-banner{
+    background:#FBEAE6;border:1px solid var(--rojo-egreso);color:var(--rojo-egreso-dark);
+    font-size:12px;font-weight:600;padding:10px 12px;border-radius:10px;margin-bottom:12px;
   }
 
-  .summary-main{
-    display:flex;
-    align-items:baseline;
-    gap:8px;
-    margin-bottom:14px;
+  /* SEMANAS (accordion) */
+  .week-details{border:1px solid var(--gris-borde);border-radius:var(--radius-md);margin-bottom:10px;overflow:hidden;}
+  .week-details:last-child{margin-bottom:0;}
+  .week-details summary{
+    list-style:none;cursor:pointer;padding:12px 14px;
+    display:flex;align-items:center;justify-content:space-between;
+    background:var(--gris-claro);font-weight:700;font-size:13px;color:var(--azul-oscuro);
   }
-  .summary-main .big{
-    font-family:'JetBrains Mono',monospace;
-    font-size:38px;
-    font-weight:700;
-    color:var(--azul-oscuro);
+  .week-details summary::-webkit-details-marker{display:none;}
+  .week-details[open] summary{border-bottom:1px solid var(--gris-borde);}
+  .week-summary-left{display:flex;flex-direction:column;gap:2px;}
+  .week-summary-left .week-tag{font-size:10px;color:var(--azul-claro);text-transform:uppercase;letter-spacing:.4px;}
+  .week-total-badge{
+    font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;
+    color:var(--verde-ingreso-dark);background:#E7F4EE;padding:4px 10px;border-radius:8px;white-space:nowrap;
   }
-  .summary-main .unit{
-    font-size:14px;
-    color:var(--gris-texto);
-    font-weight:600;
-  }
-  .week-bars{
-    display:flex;
-    gap:6px;
-    align-items:flex-end;
-    height:64px;
-    padding-top:6px;
-    border-top:1px solid var(--gris-borde);
-  }
-  .day-bar-wrap{
-    flex:1;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:flex-end;
-    height:100%;
-    gap:6px;
-  }
-  .day-bar{
-    width:100%;
-    max-width:22px;
-    background:var(--gris-borde);
-    border-radius:5px 5px 2px 2px;
-    min-height:4px;
-    transition:height .3s ease;
-  }
-  .day-bar.has-hours{background:var(--azul-claro);}
-  .day-bar.today{background:var(--azul-oscuro);}
-  .day-label{
-    font-size:10px;
-    color:var(--gris-texto);
-    font-weight:600;
-    text-transform:uppercase;
-  }
+  .week-sessions{padding:6px 14px 4px;}
+
+  .summary-main{display:flex;align-items:baseline;gap:8px;margin:10px 0 14px;}
+  .summary-main .big{font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:700;color:var(--azul-oscuro);}
+  .summary-main .unit{font-size:13px;color:var(--gris-texto);font-weight:600;}
 
   .history-item{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    padding:12px 0;
-    border-bottom:1px solid var(--gris-borde);
-    gap:10px;
+    display:flex;justify-content:space-between;align-items:center;
+    padding:11px 0;border-bottom:1px solid var(--gris-borde);gap:10px;
   }
   .history-item:last-child{border-bottom:none;}
   .hist-left{display:flex;flex-direction:column;gap:2px;}
   .hist-day{font-size:13px;font-weight:700;color:var(--azul-oscuro);text-transform:capitalize;}
   .hist-date{font-size:11px;color:var(--gris-texto);}
   .hist-times{
-    font-family:'JetBrains Mono',monospace;
-    font-size:12.5px;
-    color:var(--azul-medio);
-    display:flex;
-    gap:6px;
-    align-items:center;
+    font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--azul-medio);
+    display:flex;gap:6px;align-items:center;
   }
   .hist-times .sep{color:var(--gris-texto);}
   .hist-times .pending{color:var(--rojo-egreso);font-style:italic;font-family:'Inter',sans-serif;font-size:11.5px;}
   .hist-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;}
   .hist-hours{
-    font-family:'JetBrains Mono',monospace;
-    font-size:14px;
-    font-weight:700;
-    color:var(--verde-ingreso-dark);
-    background:#E7F4EE;
-    padding:4px 9px;
-    border-radius:8px;
-    white-space:nowrap;
+    font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;
+    color:var(--verde-ingreso-dark);background:#E7F4EE;padding:4px 9px;border-radius:8px;white-space:nowrap;
   }
-  .sync-tag{
-    font-size:10px;
-    font-weight:600;
-    display:flex;
-    align-items:center;
-    gap:3px;
-  }
+  .sync-tag{font-size:10px;font-weight:600;display:flex;align-items:center;gap:3px;}
   .sync-tag.synced{color:var(--verde-ingreso-dark);}
   .sync-tag.pending{color:var(--ambar);}
-  .sync-tag.conflict{color:var(--rojo-egreso-dark);}
-  .empty-state{
-    text-align:center;
-    padding:28px 10px;
-    color:var(--gris-texto);
-    font-size:13px;
-  }
+
+  .empty-state{text-align:center;padding:28px 10px;color:var(--gris-texto);font-size:13px;}
   .empty-state .icon{font-size:28px;display:block;margin-bottom:8px;}
+  .skeleton{padding:18px 0;text-align:center;color:var(--gris-texto);font-size:13px;}
 
   .footer-actions{
-    text-align:center;
-    margin-top:8px;
-    display:flex;
-    flex-direction:column;
-    gap:8px;
-    align-items:center;
+    text-align:center;margin-top:8px;display:flex;flex-direction:column;gap:8px;align-items:center;
   }
   .footer-actions button{
-    background:none;
-    border:none;
-    color:var(--gris-texto);
-    font-size:12px;
-    text-decoration:underline;
-    cursor:pointer;
-    font-family:inherit;
+    background:none;border:none;color:var(--gris-texto);font-size:12px;
+    text-decoration:underline;cursor:pointer;font-family:inherit;
   }
   .footer-actions button:hover{color:var(--rojo-egreso);}
-  .footer-actions .sync-btn{
-    text-decoration:none;
-    color:var(--azul-claro);
-    font-weight:600;
-  }
 
   .toast{
-    position:fixed;
-    bottom:20px;
-    left:50%;
-    transform:translateX(-50%) translateY(20px);
-    background:var(--azul-oscuro);
-    color:var(--blanco);
-    padding:12px 20px;
-    border-radius:999px;
-    font-size:13px;
-    font-weight:600;
-    box-shadow:var(--shadow-lg);
-    opacity:0;
-    transition:opacity .25s ease, transform .25s ease;
-    pointer-events:none;
-    z-index:100;
-    max-width:90vw;
-    text-align:center;
-    display:flex;
-    align-items:center;
-    gap:8px;
+    position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--azul-oscuro);color:var(--blanco);padding:12px 20px;border-radius:999px;
+    font-size:13px;font-weight:600;box-shadow:var(--shadow-lg);opacity:0;
+    transition:opacity .25s ease, transform .25s ease;pointer-events:none;z-index:100;
+    max-width:90vw;text-align:center;display:flex;align-items:center;gap:8px;
   }
-  .toast.show{
-    opacity:1;
-    transform:translateX(-50%) translateY(0);
-  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
   .toast.success{background:var(--verde-ingreso-dark);}
   .toast.warning{background:var(--ambar);}
   .toast.error{background:var(--rojo-egreso-dark);}
 
   @media (max-width:360px){
     .clock{font-size:28px;}
-    .summary-main .big{font-size:32px;}
+    .summary-main .big{font-size:28px;}
   }
 </style>
 </head>
@@ -428,24 +257,21 @@
   </div>
 
   <div class="card">
-    <h2>Resumen semanal</h2>
-    <div class="card-sub" id="weekRangeLabel">-</div>
-    <div class="summary-main">
-      <span class="big" id="weekTotal">0:00</span>
-      <span class="unit">horas trabajadas</span>
+    <div class="card-header">
+      <h2>Historial por semana</h2>
+      <button class="refresh-btn" id="btnRefreshHist"><span class="refresh-icon">&#8635;</span>Actualizar</button>
     </div>
-    <div class="week-bars" id="weekBars"></div>
-  </div>
-
-  <div class="card">
-    <h2>Historial de la semana (este dispositivo)</h2>
-    <div class="card-sub">Día, entrada, salida, horas calculadas y estado de sincronización</div>
-    <div id="historyList"></div>
+    <div class="card-sub">Datos leídos directamente desde Google Sheets — iguales en todos los dispositivos</div>
+    <div class="fuente-nube" id="fuenteNube">Cargando historial de la nube...</div>
+    <div id="conflictBanner"></div>
+    <div id="weeksContainer">
+      <div class="skeleton">Cargando semanas...</div>
+    </div>
   </div>
 
   <div class="footer-actions">
     <button class="sync-btn" id="btnForceSync">Reintentar sincronización pendiente</button>
-    <button id="btnReset">Borrar historial local de este dispositivo</button>
+    <button id="btnReset">Borrar marcas locales pendientes de este dispositivo</button>
   </div>
 </div>
 
@@ -456,74 +282,59 @@
   "use strict";
 
   const STORAGE_KEY = "control_ingreso_egreso_marcas_v3";
-  // URL de tu Google Apps Script (Web App) - debe tener doPost CON VALIDACIÓN y doGet
-  // (ver el código de Apps Script que te paso junto con este archivo).
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbx6_e9pR5r45iuEOZ3Mn81F8EMyuvNMXU9YsW1ZkjNz61iCtsyQpmkBorOSdzGzAq2jxw/exec";
-  const POLL_INTERVAL_MS = 20000; // cada cuánto se consulta el estado real al servidor
+  // URL de tu Google Apps Script (Web App) — con doPost validado y doGet (estado + historial)
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbxolC6hn6Omu45duFQMK7aLCjaBKVSH1Kr8dFyd849wXrjrOE0fVkwtochQJBxohPcP0w/exec";
+  const POLL_ESTADO_MS = 20000;    // sondeo liviano de estado (botones)
+  const POLL_HISTORIAL_MS = 60000; // sondeo del historial completo (semanas)
 
   const DIAS = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
 
-  // ---------- Storage local (historial propio de este dispositivo) ----------
+  // ---------- Storage local (solo respaldo de lo que este dispositivo generó) ----------
   function loadMarcas(){
     try{
       const raw = localStorage.getItem(STORAGE_KEY);
       return raw ? JSON.parse(raw) : [];
-    }catch(e){
-      console.error("Error leyendo localStorage", e);
-      return [];
-    }
+    }catch(e){ console.error("Error leyendo localStorage", e); return []; }
   }
-  function saveMarcas(marcas){
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(marcas));
-  }
+  function saveMarcas(marcas){ localStorage.setItem(STORAGE_KEY, JSON.stringify(marcas)); }
 
-  let marcas = loadMarcas();
+  let marcas = loadMarcas(); // marcas propias de este dispositivo (con estado de sync)
 
-  // Estado autoritativo conocido del SERVIDOR (única fuente de verdad compartida
-  // entre todos los dispositivos). Se actualiza al sondear, y al marcar.
-  let ultimoEstadoServidor = null;      // { tipo, timestamp, fecha, horaOriginal, horaRedondeada } | null
-  let servidorVerificado = false;       // true si ya pudimos consultar el servidor con éxito al menos una vez
-  let ultimaVerificacionTs = null;      // Date de la última consulta exitosa
-  let botonesCargando = false;          // evita doble clic mientras se espera respuesta del servidor
+  // Estado / datos autoritativos que vienen del servidor (Google Sheets)
+  let ultimoEstadoServidor = null;   // { tipo, timestamp, ... } | null   (sondeo liviano)
+  let servidorVerificado = false;
+  let ultimaVerificacionTs = null;
+  let botonesCargando = false;
+
+  let historialServidor = [];        // array completo de marcas leídas de la hoja
+  let historialCargado = false;
+  let historialError = false;
+  let actualizandoHistorial = false;
 
   // ---------- Time helpers ----------
   function roundToNearest15(date){
     const d = new Date(date.getTime());
     const minutes = d.getMinutes();
     const remainder = minutes % 15;
-    let roundedMinutes;
-    if(remainder < 7.5){
-      roundedMinutes = minutes - remainder;
-    } else {
-      roundedMinutes = minutes + (15 - remainder);
-    }
-    d.setMinutes(roundedMinutes);
-    d.setSeconds(0);
-    d.setMilliseconds(0);
+    let roundedMinutes = (remainder < 7.5) ? (minutes - remainder) : (minutes + (15 - remainder));
+    d.setMinutes(roundedMinutes); d.setSeconds(0); d.setMilliseconds(0);
     return d;
   }
-
   function fmtTime(date){
     if(!date) return "--:--";
     const d = new Date(date);
-    const hh = String(d.getHours()).padStart(2,"0");
-    const mm = String(d.getMinutes()).padStart(2,"0");
-    return `${hh}:${mm}`;
+    return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
   }
   function fmtTimeSec(date){
     const d = new Date(date);
-    const hh = String(d.getHours()).padStart(2,"0");
-    const mm = String(d.getMinutes()).padStart(2,"0");
-    const ss = String(d.getSeconds()).padStart(2,"0");
-    return `${hh}:${mm}:${ss}`;
+    return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")}`;
   }
   function fmtDateShort(date){
     const d = new Date(date);
     return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`;
   }
   function dateOnlyISO(date){
-    const d = new Date(date);
-    d.setHours(0,0,0,0);
+    const d = new Date(date); d.setHours(0,0,0,0);
     return d.toISOString().slice(0,10);
   }
   function hoursDecimal(entradaMs, salidaMs){
@@ -538,58 +349,64 @@
     return `${h}:${String(m).padStart(2,"0")}`;
   }
   function getWeekRange(date){
-    const d = new Date(date);
-    d.setHours(0,0,0,0);
+    const d = new Date(date); d.setHours(0,0,0,0);
     const day = d.getDay();
     const diffToMonday = (day === 0) ? -6 : 1 - day;
-    const monday = new Date(d);
-    monday.setDate(d.getDate() + diffToMonday);
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    sunday.setHours(23,59,59,999);
+    const monday = new Date(d); monday.setDate(d.getDate() + diffToMonday);
+    const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6); sunday.setHours(23,59,59,999);
     return { start: monday, end: sunday };
   }
 
-  function getMarcasOrdenadas(){
+  function getMarcasLocalesOrdenadas(){
     return [...marcas].sort((a,b) => new Date(a.raw) - new Date(b.raw));
   }
   function getUltimaMarcaLocal(){
-    const ordenadas = getMarcasOrdenadas();
-    return ordenadas.length > 0 ? ordenadas[ordenadas.length - 1] : null;
+    const o = getMarcasLocalesOrdenadas();
+    return o.length ? o[o.length - 1] : null;
   }
 
-  // ---------- REGLA CLAVE: estado combinado (servidor + pendientes locales) ----------
-  // El servidor es la fuente de verdad entre dispositivos. Pero si este dispositivo
-  // tiene una marca propia AÚN NO sincronizada (por ejemplo, quedó offline) y es más
-  // reciente que lo último que sabemos del servidor, esa marca local pendiente manda,
-  // porque representa la acción real más nueva del usuario en este dispositivo.
+  // Combina lo que ya está confirmado en la hoja (historialServidor) con marcas
+  // propias de este dispositivo que TODAVÍA no llegaron a sincronizarse, para no
+  // perder de vista la acción más reciente aunque el servidor no la sepa todavía.
+  function getMarcasCombinadas(){
+    const idsServidor = new Set(historialServidor.map(m => m.id));
+    const serverNorm = historialServidor.map(m => ({
+      id: m.id, tipo: m.tipo, raw: m.timestamp,
+      rounded: m.timestampRedondeado || `${m.fecha}T${m.horaRedondeada}:00`,
+      synced: true, origen: "servidor"
+    }));
+    const localPendientes = marcas
+      .filter(m => m.synced === false && !idsServidor.has(m.id))
+      .map(m => ({ ...m, origen: "local" }));
+    return [...serverNorm, ...localPendientes].sort((a,b) => new Date(a.raw) - new Date(b.raw));
+  }
+
   function getUltimaMarcaEfectiva(){
-    const candidatos = [];
-    const localUltima = getUltimaMarcaLocal();
-    if(localUltima){
-      candidatos.push({ tipo: localUltima.tipo, ts: new Date(localUltima.raw).getTime() });
-    }
-    if(ultimoEstadoServidor && ultimoEstadoServidor.tipo){
-      const ts = ultimoEstadoServidor.timestamp ? new Date(ultimoEstadoServidor.timestamp).getTime() : 0;
-      candidatos.push({ tipo: ultimoEstadoServidor.tipo, ts });
-    }
-    if(candidatos.length === 0) return null;
-    candidatos.sort((a,b) => b.ts - a.ts);
-    return candidatos[0];
+    const combinadas = getMarcasCombinadas();
+    return combinadas.length ? combinadas[combinadas.length - 1] : null;
   }
 
   function getEstadoActual(){
-    const efectiva = getUltimaMarcaEfectiva();
-    if(!efectiva || efectiva.tipo === "Egreso") return "fuera";
-    return "trabajando";
+    // Prioriza el sondeo liviano de estado (más frecuente); si hay una marca local
+    // pendiente más nueva que ese sondeo, esa manda (por si el sondeo aún no la vio).
+    const candidatos = [];
+    if(ultimoEstadoServidor && ultimoEstadoServidor.tipo){
+      candidatos.push({ tipo: ultimoEstadoServidor.tipo, ts: new Date(ultimoEstadoServidor.timestamp || 0).getTime() });
+    }
+    const localUltima = getUltimaMarcaLocal();
+    if(localUltima && localUltima.synced === false){
+      candidatos.push({ tipo: localUltima.tipo, ts: new Date(localUltima.raw).getTime() });
+    }
+    if(candidatos.length === 0) return "fuera";
+    candidatos.sort((a,b) => b.ts - a.ts);
+    return candidatos[0].tipo === "Egreso" ? "fuera" : "trabajando";
   }
 
-  // Reconstruye sesiones locales (entrada+salida) para el resumen/historial de ESTE dispositivo.
-  function buildSesiones(){
-    const ordenadas = getMarcasOrdenadas();
+  // Reconstruye sesiones (entrada+salida) emparejando Ingreso→Egreso en orden cronológico.
+  function buildSesiones(marcasOrdenadas){
     const sesiones = [];
     let abierta = null;
-    ordenadas.forEach(m => {
+    marcasOrdenadas.forEach(m => {
       if(m.tipo === "Ingreso"){
         if(abierta) sesiones.push(abierta);
         abierta = {
@@ -599,11 +416,8 @@
         };
       } else {
         if(abierta){
-          abierta.salidaRaw = m.raw;
-          abierta.salidaRounded = m.rounded;
-          abierta.salidaSynced = m.synced;
-          sesiones.push(abierta);
-          abierta = null;
+          abierta.salidaRaw = m.raw; abierta.salidaRounded = m.rounded; abierta.salidaSynced = m.synced;
+          sesiones.push(abierta); abierta = null;
         } else {
           sesiones.push({
             id: m.id, dateISO: dateOnlyISO(m.raw),
@@ -617,11 +431,24 @@
     return sesiones;
   }
 
+  // Agrupa las sesiones en semanas lunes-domingo y calcula el total de horas de cada una.
+  function buildGruposSemanales(sesiones){
+    const grupos = {};
+    sesiones.forEach(s => {
+      const ref = s.entradaRaw || s.salidaRaw;
+      if(!ref) return;
+      const { start, end } = getWeekRange(new Date(ref));
+      const key = dateOnlyISO(start);
+      if(!grupos[key]) grupos[key] = { start, end, sesiones: [], totalHoras: 0 };
+      grupos[key].sesiones.push(s);
+      if(s.entradaRounded && s.salidaRounded){
+        grupos[key].totalHoras += hoursDecimal(new Date(s.entradaRounded).getTime(), new Date(s.salidaRounded).getTime());
+      }
+    });
+    return Object.values(grupos).sort((a,b) => b.start - a.start);
+  }
+
   // ---------- Comunicación con Apps Script ----------
-  // NOTA IMPORTANTE: usamos Content-Type "text/plain" (no "application/json") para
-  // que el navegador lo trate como "solicitud simple" y NO dispare un preflight
-  // OPTIONS, que Apps Script no responde por defecto. Esto permite además LEER la
-  // respuesta JSON real del servidor (a diferencia de mode:"no-cors").
   async function enviarMarcaAlServidor(marca){
     const payload = {
       id: marca.id,
@@ -629,7 +456,8 @@
       fecha: dateOnlyISO(marca.raw),
       tipo: marca.tipo,
       horaOriginal: fmtTimeSec(marca.raw),
-      horaRedondeada: fmtTime(marca.rounded)
+      horaRedondeada: fmtTime(marca.rounded),
+      timestampRedondeado: marca.rounded
     };
     const res = await fetch(GAS_URL, {
       method: "POST",
@@ -637,16 +465,19 @@
       body: JSON.stringify(payload)
     });
     if(!res.ok) throw new Error("HTTP " + res.status);
-    return res.json(); // { status:"ok" } | { status:"rejected", motivo, ultimoEstado }
+    return res.json();
   }
 
   async function consultarEstadoServidor(){
-    const res = await fetch(`${GAS_URL}?action=estado&_=${Date.now()}`, {
-      method: "GET",
-      cache: "no-store"
-    });
+    const res = await fetch(`${GAS_URL}?action=estado&_=${Date.now()}`, { method:"GET", cache:"no-store" });
     if(!res.ok) throw new Error("HTTP " + res.status);
-    return res.json(); // { tipo, timestamp, fecha, horaOriginal, horaRedondeada } | { tipo:null }
+    return res.json();
+  }
+
+  async function consultarHistorialServidor(){
+    const res = await fetch(`${GAS_URL}?action=historial&_=${Date.now()}`, { method:"GET", cache:"no-store" });
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    return res.json(); // array
   }
 
   async function actualizarEstadoDesdeServidor(silencioso){
@@ -664,7 +495,24 @@
     }
   }
 
-  // Reintenta subir marcas locales que quedaron pendientes (offline en su momento)
+  async function actualizarHistorialDesdeServidor(silencioso){
+    actualizandoHistorial = true;
+    render();
+    try{
+      const data = await consultarHistorialServidor();
+      historialServidor = Array.isArray(data) ? data : [];
+      historialCargado = true;
+      historialError = false;
+    }catch(err){
+      console.warn("No se pudo cargar el historial desde el servidor:", err);
+      historialError = true;
+      if(!silencioso) showToast("No se pudo cargar el historial desde Google Sheets.", "warning");
+    }finally{
+      actualizandoHistorial = false;
+      render();
+    }
+  }
+
   async function reintentarPendientes(silencioso){
     if(!navigator.onLine) return;
     const pendientes = marcas.filter(m => m.synced === false);
@@ -673,47 +521,34 @@
       return;
     }
     if(!silencioso) showToast(`Sincronizando ${pendientes.length} registro(s) pendiente(s)...`, "warning");
-
+    let huboExito = false;
     for(const m of pendientes){
       try{
         const resp = await enviarMarcaAlServidor(m);
-        if(resp && resp.status === "ok"){
-          m.synced = true;
-        } else if(resp && resp.status === "rejected"){
-          // Otro dispositivo ya generó una marca en conflicto mientras este estaba offline.
+        if(resp && resp.status === "ok"){ m.synced = true; huboExito = true; }
+        else if(resp && resp.status === "rejected"){
           m.synced = "conflict";
           ultimoEstadoServidor = resp.ultimoEstado || ultimoEstadoServidor;
           servidorVerificado = true;
         }
-      }catch(err){
-        console.warn("Reintento fallido para marca", m.id, err);
-      }
+      }catch(err){ console.warn("Reintento fallido para marca", m.id, err); }
     }
     saveMarcas(marcas);
+    if(huboExito) await actualizarHistorialDesdeServidor(true);
     render();
   }
 
-  // ---------- Acciones de marcado (con validación real del servidor) ----------
-  function setBotonesCargando(loading){
-    botonesCargando = loading;
-    render();
-  }
+  // ---------- Acciones de marcado (validadas por el servidor) ----------
+  function setBotonesCargando(loading){ botonesCargando = loading; render(); }
 
   async function marcarIngreso(){
     if(botonesCargando) return;
-    if(getEstadoActual() !== "fuera"){
-      showToast("Ya estás marcado como Trabajando.", "warning");
-      return;
-    }
+    if(getEstadoActual() !== "fuera"){ showToast("Ya estás marcado como Trabajando.", "warning"); return; }
     await ejecutarMarca("Ingreso");
   }
-
   async function marcarEgreso(){
     if(botonesCargando) return;
-    if(getEstadoActual() !== "trabajando"){
-      showToast("No hay un Ingreso activo para marcar egreso.", "warning");
-      return;
-    }
+    if(getEstadoActual() !== "trabajando"){ showToast("No hay un Ingreso activo para marcar egreso.", "warning"); return; }
     await ejecutarMarca("Egreso");
   }
 
@@ -722,17 +557,11 @@
     const rounded = roundToNearest15(now);
     const marcaTentativa = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
-      tipo,
-      raw: now.toISOString(),
-      rounded: rounded.toISOString(),
-      synced: false
+      tipo, raw: now.toISOString(), rounded: rounded.toISOString(), synced: false
     };
 
     if(!navigator.onLine){
-      // Sin conexión: no hay forma de validar contra otros dispositivos en este momento.
-      marcas.push(marcaTentativa);
-      saveMarcas(marcas);
-      render();
+      marcas.push(marcaTentativa); saveMarcas(marcas); render();
       showToast(`${tipo} guardado localmente. Sin conexión: se validará y sincronizará luego.`, "warning");
       return;
     }
@@ -743,25 +572,19 @@
 
       if(resp && resp.status === "ok"){
         marcaTentativa.synced = true;
-        marcas.push(marcaTentativa);
-        saveMarcas(marcas);
+        marcas.push(marcaTentativa); saveMarcas(marcas);
         ultimoEstadoServidor = {
-          tipo, timestamp: marcaTentativa.raw,
-          fecha: dateOnlyISO(marcaTentativa.raw),
-          horaOriginal: fmtTimeSec(marcaTentativa.raw),
-          horaRedondeada: fmtTime(marcaTentativa.rounded)
+          tipo, timestamp: marcaTentativa.raw, fecha: dateOnlyISO(marcaTentativa.raw),
+          horaOriginal: fmtTimeSec(marcaTentativa.raw), horaRedondeada: fmtTime(marcaTentativa.rounded)
         };
-        servidorVerificado = true;
-        ultimaVerificacionTs = new Date();
+        servidorVerificado = true; ultimaVerificacionTs = new Date();
         setBotonesCargando(false);
         showToast(`${tipo} registrado y sincronizado con la nube ☁️`, "success");
+        actualizarHistorialDesdeServidor(true);
 
       } else if(resp && resp.status === "rejected"){
-        // El servidor detectó que otro dispositivo ya cambió el estado antes que
-        // esta petición llegara. No se guarda un registro duplicado/erróneo.
         ultimoEstadoServidor = resp.ultimoEstado || ultimoEstadoServidor;
-        servidorVerificado = true;
-        ultimaVerificacionTs = new Date();
+        servidorVerificado = true; ultimaVerificacionTs = new Date();
         setBotonesCargando(false);
         const tipoServidor = resp.ultimoEstado ? resp.ultimoEstado.tipo : null;
         showToast(
@@ -770,39 +593,32 @@
             : "No hay un Ingreso activo según el servidor. No se registró el Egreso.",
           "error"
         );
+        actualizarHistorialDesdeServidor(true);
       } else {
         throw new Error("Respuesta inesperada del servidor");
       }
     }catch(err){
       console.error("Fallo al validar con el servidor:", err);
-      // No se pudo confirmar con el servidor (caída de red a mitad de camino, etc.).
-      // Se guarda local como respaldo, marcado pendiente para reintentar y revalidar.
-      marcas.push(marcaTentativa);
-      saveMarcas(marcas);
+      marcas.push(marcaTentativa); saveMarcas(marcas);
       setBotonesCargando(false);
       showToast(`${tipo} guardado localmente. No se pudo confirmar con el servidor; se reintentará.`, "warning");
     }
   }
 
   function resetAll(){
-    if(!confirm("¿Borrar el historial guardado en ESTE dispositivo? Esto no afecta los datos ya guardados en Google Sheets.")) return;
+    if(!confirm("¿Borrar las marcas pendientes/locales de este dispositivo? Esto no afecta lo ya guardado en Google Sheets.")) return;
+    marcas = marcas.filter(m => m.synced === true); // conserva solo las ya confirmadas, por prolijidad
     marcas = [];
-    saveMarcas(marcas);
-    render();
-    showToast("Historial local eliminado", "success");
+    saveMarcas(marcas); render();
+    showToast("Marcas locales pendientes eliminadas", "success");
   }
 
   // ---------- Rendering ----------
   function renderConnBadge(){
     const badge = document.getElementById("connBadge");
     const text = document.getElementById("connText");
-    if(navigator.onLine){
-      badge.classList.remove("offline");
-      text.textContent = "En línea";
-    } else {
-      badge.classList.add("offline");
-      text.textContent = "Sin conexión";
-    }
+    if(navigator.onLine){ badge.classList.remove("offline"); text.textContent = "En línea"; }
+    else { badge.classList.add("offline"); text.textContent = "Sin conexión"; }
   }
 
   function renderEstadoBox(){
@@ -813,20 +629,17 @@
 
     if(botonesCargando){
       box.className = "estado-box cargando";
-      emoji.textContent = "⏳";
-      texto.textContent = "Verificando con el servidor...";
+      emoji.textContent = "⏳"; texto.textContent = "Verificando con el servidor...";
       verif.textContent = "Confirmando con Google Sheets";
       return;
     }
 
     const estado = getEstadoActual();
     if(estado === "trabajando"){
-      box.className = "estado-box trabajando";
-      emoji.textContent = "🟢";
+      box.className = "estado-box trabajando"; emoji.textContent = "🟢";
       texto.textContent = "Estado actual: Trabajando";
     } else {
-      box.className = "estado-box fuera";
-      emoji.textContent = "🔴";
+      box.className = "estado-box fuera"; emoji.textContent = "🔴";
       texto.textContent = "Estado actual: Fuera del trabajo";
     }
 
@@ -846,23 +659,16 @@
     const subEgreso = document.getElementById("subEgreso");
 
     if(botonesCargando){
-      btnIngreso.disabled = true;
-      btnEgreso.disabled = true;
-      subIngreso.textContent = "Verificando...";
-      subEgreso.textContent = "Verificando...";
+      btnIngreso.disabled = true; btnEgreso.disabled = true;
+      subIngreso.textContent = "Verificando..."; subEgreso.textContent = "Verificando...";
       return;
     }
-
     if(estado === "fuera"){
-      btnIngreso.disabled = false;
-      btnEgreso.disabled = true;
-      subIngreso.textContent = "Marcar entrada";
-      subEgreso.textContent = "Bloqueado";
+      btnIngreso.disabled = false; btnEgreso.disabled = true;
+      subIngreso.textContent = "Marcar entrada"; subEgreso.textContent = "Bloqueado";
     } else {
-      btnIngreso.disabled = true;
-      btnEgreso.disabled = false;
-      subIngreso.textContent = "Bloqueado";
-      subEgreso.textContent = "Marcar salida";
+      btnIngreso.disabled = true; btnEgreso.disabled = false;
+      subIngreso.textContent = "Bloqueado"; subEgreso.textContent = "Marcar salida";
     }
   }
 
@@ -870,141 +676,116 @@
     const efectiva = getUltimaMarcaEfectiva();
     const dot = document.getElementById("statusDot");
     const text = document.getElementById("statusText");
-
-    if(!efectiva){
-      dot.classList.remove("active");
-      text.textContent = "Sin marcas registradas";
-      return;
-    }
+    if(!efectiva){ dot.classList.remove("active"); text.textContent = "Sin marcas registradas"; return; }
     if(efectiva.tipo === "Ingreso"){
       dot.classList.add("active");
-      text.textContent = `Ingreso activo desde las ${fmtTime(new Date(efectiva.ts))}`;
+      text.textContent = `Ingreso activo desde las ${fmtTime(efectiva.rounded)}`;
     } else {
       dot.classList.remove("active");
-      text.textContent = `Última salida: ${fmtTime(new Date(efectiva.ts))}`;
+      text.textContent = `Última salida: ${fmtTime(efectiva.rounded)}`;
     }
   }
 
-  function renderWeekSummary(){
-    const { start, end } = getWeekRange(new Date());
-    const sesiones = buildSesiones();
-    const weekSesiones = sesiones.filter(s => {
-      const ref = s.entradaRaw || s.salidaRaw;
-      const rd = new Date(ref);
-      return rd >= start && rd <= end;
-    });
-
-    document.getElementById("weekRangeLabel").textContent =
-      `${fmtDateShort(start)} — ${fmtDateShort(end)}`;
-
-    let totalHours = 0;
-    const perDay = [0,0,0,0,0,0,0];
-
-    weekSesiones.forEach(s => {
-      if(s.entradaRounded && s.salidaRounded){
-        const h = hoursDecimal(new Date(s.entradaRounded).getTime(), new Date(s.salidaRounded).getTime());
-        totalHours += h;
-        const ref = s.entradaRaw || s.salidaRaw;
-        const jsDay = new Date(ref).getDay();
-        const idx = (jsDay === 0) ? 6 : jsDay - 1;
-        perDay[idx] += h;
-      }
-    });
-
-    document.getElementById("weekTotal").textContent = fmtHoursMin(totalHours);
-
-    const maxH = Math.max(...perDay, 1);
-    const barsContainer = document.getElementById("weekBars");
-    barsContainer.innerHTML = "";
-    const labels = ["L","M","X","J","V","S","D"];
-    const todayIdx = (function(){
-      const jsDay = new Date().getDay();
-      return (jsDay === 0) ? 6 : jsDay - 1;
-    })();
-
-    perDay.forEach((h, idx) => {
-      const wrap = document.createElement("div");
-      wrap.className = "day-bar-wrap";
-      const bar = document.createElement("div");
-      const heightPct = h > 0 ? Math.max(8, (h / maxH) * 100) : 4;
-      bar.style.height = heightPct + "%";
-      bar.className = "day-bar" + (h > 0 ? " has-hours" : "") + (idx === todayIdx ? " today" : "");
-      const label = document.createElement("div");
-      label.className = "day-label";
-      label.textContent = labels[idx];
-      wrap.appendChild(bar);
-      wrap.appendChild(label);
-      barsContainer.appendChild(wrap);
-    });
+  function renderFuenteNube(){
+    const el = document.getElementById("fuenteNube");
+    if(actualizandoHistorial){ el.className = "fuente-nube"; el.textContent = "🔄 Actualizando historial desde la nube..."; return; }
+    if(historialError && !historialCargado){ el.className = "fuente-nube error"; el.textContent = "⚠ No se pudo cargar el historial desde Google Sheets."; return; }
+    if(historialCargado){ el.className = "fuente-nube ok"; el.textContent = `☁️ Historial actualizado desde Google Sheets (${historialServidor.length} marcas)`; return; }
+    el.className = "fuente-nube"; el.textContent = "Cargando historial de la nube...";
   }
 
-  function renderHistory(){
-    const { start, end } = getWeekRange(new Date());
-    const sesiones = buildSesiones();
-    const weekSesiones = sesiones
-      .filter(s => {
-        const ref = s.entradaRaw || s.salidaRaw;
-        const rd = new Date(ref);
-        return rd >= start && rd <= end;
-      })
-      .sort((a,b) => new Date(b.entradaRaw || b.salidaRaw) - new Date(a.entradaRaw || a.salidaRaw));
+  function renderConflictBanner(){
+    const cont = document.getElementById("conflictBanner");
+    const conflictos = marcas.filter(m => m.synced === "conflict");
+    if(conflictos.length === 0){ cont.innerHTML = ""; return; }
+    cont.innerHTML = `<div class="conflict-banner">⚠ ${conflictos.length} marca(s) de este dispositivo no se pudieron guardar porque ya existía una marca en conflicto registrada desde otro lugar. Revisá el estado actual antes de reintentar.</div>`;
+  }
 
-    const container = document.getElementById("historyList");
-    container.innerHTML = "";
+  function renderWeeks(){
+    const container = document.getElementById("weeksContainer");
 
-    if(weekSesiones.length === 0){
-      container.innerHTML = `
-        <div class="empty-state">
-          <span class="icon">&#128203;</span>
-          Todavía no hay registros esta semana en este dispositivo.<br>Marcá tu ingreso para comenzar.
-        </div>`;
+    if(!historialCargado && actualizandoHistorial){
+      container.innerHTML = `<div class="skeleton">Cargando semanas...</div>`;
+      return;
+    }
+    if(!historialCargado && historialError){
+      container.innerHTML = `<div class="empty-state"><span class="icon">📡</span>No se pudo conectar con la hoja de cálculo.<br>Probá "Actualizar" cuando tengas conexión.</div>`;
       return;
     }
 
-    weekSesiones.forEach(s => {
-      const ref = s.entradaRaw || s.salidaRaw;
-      const refDate = new Date(ref);
-      const dayName = DIAS[refDate.getDay()];
-      const item = document.createElement("div");
-      item.className = "history-item";
+    const combinadas = getMarcasCombinadas();
+    const sesiones = buildSesiones(combinadas);
+    const grupos = buildGruposSemanales(sesiones);
 
-      const entradaHtml = s.entradaRounded
-        ? `<span>${fmtTime(s.entradaRounded)}</span>`
-        : `<span class="pending">sin ingreso</span>`;
-      const salidaHtml = s.salidaRounded
-        ? `<span>${fmtTime(s.salidaRounded)}</span>`
-        : `<span class="pending">en curso</span>`;
+    if(grupos.length === 0){
+      container.innerHTML = `<div class="empty-state"><span class="icon">&#128203;</span>Todavía no hay marcas registradas.<br>Marcá tu ingreso para comenzar.</div>`;
+      return;
+    }
 
-      const horasHtml = (s.entradaRounded && s.salidaRounded)
-        ? fmtHoursMin(hoursDecimal(new Date(s.entradaRounded).getTime(), new Date(s.salidaRounded).getTime()))
-        : "—";
+    const { start: inicioSemanaActual } = getWeekRange(new Date());
+    const keyActual = dateOnlyISO(inicioSemanaActual);
 
-      const estados = [s.entradaSynced, s.salidaRounded ? s.salidaSynced : true].filter(v => v !== null);
-      let syncHtml;
-      if(estados.includes("conflict")){
-        syncHtml = `<span class="sync-tag conflict">⚠ Conflicto</span>`;
-      } else if(estados.every(v => v === true)){
-        syncHtml = `<span class="sync-tag synced">☁️ Sincronizado</span>`;
-      } else {
-        syncHtml = `<span class="sync-tag pending">⏳ Pendiente</span>`;
-      }
+    container.innerHTML = "";
+    grupos.forEach(g => {
+      const key = dateOnlyISO(g.start);
+      const esActual = key === keyActual;
 
-      item.innerHTML = `
-        <div class="hist-left">
-          <span class="hist-day">${dayName}</span>
-          <span class="hist-date">${fmtDateShort(refDate)}</span>
-          <span class="hist-times">
-            ${entradaHtml}
-            <span class="sep">→</span>
-            ${salidaHtml}
-          </span>
-        </div>
-        <div class="hist-right">
-          <div class="hist-hours">${horasHtml}</div>
-          ${syncHtml}
-        </div>
+      const details = document.createElement("details");
+      details.className = "week-details";
+      if(esActual) details.open = true;
+
+      const summary = document.createElement("summary");
+      summary.innerHTML = `
+        <span class="week-summary-left">
+          <span>${fmtDateShort(g.start)} — ${fmtDateShort(g.end)}</span>
+          <span class="week-tag">${esActual ? "Semana actual" : "Semana anterior"}</span>
+        </span>
+        <span class="week-total-badge">${fmtHoursMin(g.totalHoras)} h</span>
       `;
-      container.appendChild(item);
+      details.appendChild(summary);
+
+      const sesionesDiv = document.createElement("div");
+      sesionesDiv.className = "week-sessions";
+
+      const sesionesOrdenadas = [...g.sesiones].sort((a,b) =>
+        new Date(b.entradaRaw || b.salidaRaw) - new Date(a.entradaRaw || a.salidaRaw)
+      );
+
+      sesionesOrdenadas.forEach(s => {
+        const ref = s.entradaRaw || s.salidaRaw;
+        const refDate = new Date(ref);
+        const dayName = DIAS[refDate.getDay()];
+
+        const entradaHtml = s.entradaRounded ? `<span>${fmtTime(s.entradaRounded)}</span>` : `<span class="pending">sin ingreso</span>`;
+        const salidaHtml = s.salidaRounded ? `<span>${fmtTime(s.salidaRounded)}</span>` : `<span class="pending">en curso</span>`;
+        const horasHtml = (s.entradaRounded && s.salidaRounded)
+          ? fmtHoursMin(hoursDecimal(new Date(s.entradaRounded).getTime(), new Date(s.salidaRounded).getTime()))
+          : "—";
+
+        const entradaPendiente = s.entradaRounded ? s.entradaSynced === false : false;
+        const salidaPendiente = s.salidaRounded ? s.salidaSynced === false : false;
+        const syncHtml = (entradaPendiente || salidaPendiente)
+          ? `<span class="sync-tag pending">⏳ Pendiente</span>`
+          : `<span class="sync-tag synced">☁️ Nube</span>`;
+
+        const item = document.createElement("div");
+        item.className = "history-item";
+        item.innerHTML = `
+          <div class="hist-left">
+            <span class="hist-day">${dayName}</span>
+            <span class="hist-date">${fmtDateShort(refDate)}</span>
+            <span class="hist-times">${entradaHtml}<span class="sep">→</span>${salidaHtml}</span>
+          </div>
+          <div class="hist-right">
+            <div class="hist-hours">${horasHtml}</div>
+            ${syncHtml}
+          </div>
+        `;
+        sesionesDiv.appendChild(item);
+      });
+
+      details.appendChild(sesionesDiv);
+      container.appendChild(details);
     });
   }
 
@@ -1013,19 +794,20 @@
     renderEstadoBox();
     renderBotones();
     renderStatusRow();
-    renderWeekSummary();
-    renderHistory();
+    renderFuenteNube();
+    renderConflictBanner();
+    renderWeeks();
+
+    const btn = document.getElementById("btnRefreshHist");
+    if(actualizandoHistorial) btn.classList.add("spinning"); else btn.classList.remove("spinning");
   }
 
   function tickClock(){
     const now = new Date();
-    const hh = String(now.getHours()).padStart(2,"0");
-    const mm = String(now.getMinutes()).padStart(2,"0");
-    const ss = String(now.getSeconds()).padStart(2,"0");
-    document.getElementById("clock").textContent = `${hh}:${mm}:${ss}`;
+    document.getElementById("clock").textContent =
+      `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}:${String(now.getSeconds()).padStart(2,"0")}`;
     const dayName = DIAS[now.getDay()];
-    const dateStr = `${dayName}, ${now.getDate()} de ${now.toLocaleString('es-ES', { month: 'long' })}`;
-    document.getElementById("clockDate").textContent = dateStr;
+    document.getElementById("clockDate").textContent = `${dayName}, ${now.getDate()} de ${now.toLocaleString('es-ES', { month: 'long' })}`;
   }
 
   let toastTimer = null;
@@ -1042,11 +824,13 @@
   document.getElementById("btnEgreso").addEventListener("click", marcarEgreso);
   document.getElementById("btnReset").addEventListener("click", resetAll);
   document.getElementById("btnForceSync").addEventListener("click", () => reintentarPendientes(false));
+  document.getElementById("btnRefreshHist").addEventListener("click", () => actualizarHistorialDesdeServidor(false));
 
   window.addEventListener("online", () => {
     render();
     showToast("Conexión recuperada. Verificando estado real...", "warning");
     actualizarEstadoDesdeServidor(true).then(() => reintentarPendientes(true));
+    actualizarHistorialDesdeServidor(true);
   });
   window.addEventListener("offline", () => {
     render();
@@ -1057,12 +841,11 @@
   setInterval(tickClock, 1000);
   render();
 
-  // Verificación inicial obligatoria contra el servidor antes de habilitar botones,
-  // y luego sondeo periódico para reflejar marcas hechas desde OTROS dispositivos.
   actualizarEstadoDesdeServidor(true).then(() => reintentarPendientes(true));
-  setInterval(() => actualizarEstadoDesdeServidor(true), POLL_INTERVAL_MS);
+  actualizarHistorialDesdeServidor(true);
 
-  // Refresco de reloj/semana + reintento de pendientes cada 60s
+  setInterval(() => actualizarEstadoDesdeServidor(true), POLL_ESTADO_MS);
+  setInterval(() => actualizarHistorialDesdeServidor(true), POLL_HISTORIAL_MS);
   setInterval(() => { render(); }, 60000);
 
 })();
