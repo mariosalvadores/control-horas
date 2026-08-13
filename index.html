@@ -7,6 +7,9 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230E2A47'/%3E%3Ccircle cx='32' cy='34' r='18' fill='none' stroke='white' stroke-width='4'/%3E%3Cpath d='M32 24 V34 L40 40' stroke='white' stroke-width='4' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Ccircle cx='48' cy='16' r='7' fill='%231D7A55'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<!-- Librería para exportar PDF (solo se usa al presionar "Descargar PDF"; el CSV no la necesita) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
   :root{
     --azul-oscuro:#0E2A47;
@@ -192,6 +195,44 @@
   .empty-state .icon{font-size:28px;display:block;margin-bottom:8px;}
   .skeleton{padding:18px 0;text-align:center;color:var(--gris-texto);font-size:13px;}
 
+  /* REPORTES */
+  .report-range-group{
+    display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;
+  }
+  .range-chip{
+    border:1.5px solid var(--gris-borde);background:var(--gris-claro);
+    color:var(--azul-medio);font-size:12px;font-weight:600;
+    padding:8px 12px;border-radius:999px;cursor:pointer;font-family:inherit;
+    transition:all .15s ease;
+  }
+  .range-chip:hover{border-color:var(--azul-claro);}
+  .range-chip.active{
+    background:var(--azul-oscuro);border-color:var(--azul-oscuro);color:var(--blanco);
+  }
+  .report-custom-dates{
+    display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;
+  }
+  .report-custom-dates label{font-size:11px;font-weight:600;color:var(--gris-texto);display:block;margin-bottom:5px;}
+  .report-custom-dates input[type="date"]{
+    width:100%;padding:10px;font-size:13px;font-family:'JetBrains Mono',monospace;
+    border:1.5px solid var(--gris-borde);border-radius:10px;color:var(--azul-oscuro);background:var(--gris-claro);
+  }
+  .report-preview{
+    background:var(--gris-claro);border:1px solid var(--gris-borde);border-radius:10px;
+    padding:10px 12px;font-size:12px;color:var(--azul-medio);font-weight:600;margin-bottom:14px;
+  }
+  .report-actions{display:flex;gap:10px;}
+  .report-btn{
+    flex:1;border:none;border-radius:12px;padding:13px 10px;
+    font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;color:var(--blanco);
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    transition:transform .12s ease, opacity .15s ease;
+  }
+  .report-btn:active{transform:scale(0.97);}
+  .report-btn.csv{background:linear-gradient(160deg,var(--azul-medio),var(--azul-oscuro));}
+  .report-btn.pdf{background:linear-gradient(160deg,var(--rojo-egreso),var(--rojo-egreso-dark));}
+  .report-btn:disabled{opacity:0.55;cursor:not-allowed;}
+
   .footer-actions{
     text-align:center;margin-top:8px;display:flex;flex-direction:column;gap:8px;align-items:center;
   }
@@ -250,6 +291,7 @@
   @media (max-width:360px){
     .clock{font-size:28px;}
     .modal-fields{grid-template-columns:1fr;}
+    .report-actions{flex-direction:column;}
   }
 </style>
 </head>
@@ -290,6 +332,37 @@
       <span class="label">EGRESO</span>
       <span class="sub" id="subEgreso">Verificando...</span>
     </button>
+  </div>
+
+  <div class="card">
+    <h2>Generar reporte</h2>
+    <div class="card-sub">Elegí el rango y descargalo en CSV o PDF</div>
+
+    <div class="report-range-group" id="reportRangeGroup">
+      <button class="range-chip" data-range="semana_actual">Semana actual</button>
+      <button class="range-chip" data-range="semana_anterior">Semana anterior</button>
+      <button class="range-chip" data-range="mes_actual">Mes actual</button>
+      <button class="range-chip" data-range="mes_anterior">Mes anterior</button>
+      <button class="range-chip" data-range="personalizado">Rango personalizado</button>
+    </div>
+
+    <div class="report-custom-dates" id="reportCustomDates" style="display:none;">
+      <div>
+        <label for="reportDesde">Desde</label>
+        <input type="date" id="reportDesde">
+      </div>
+      <div>
+        <label for="reportHasta">Hasta</label>
+        <input type="date" id="reportHasta">
+      </div>
+    </div>
+
+    <div class="report-preview" id="reportPreview">Calculando rango...</div>
+
+    <div class="report-actions">
+      <button class="report-btn csv" id="btnReportCSV">📄 Descargar CSV</button>
+      <button class="report-btn pdf" id="btnReportPDF">🧾 Descargar PDF</button>
+    </div>
   </div>
 
   <div class="card">
@@ -341,7 +414,7 @@
   "use strict";
 
   const STORAGE_KEY = "control_ingreso_egreso_marcas_v3";
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbzRknpyeR_Rcyr9JWnfjna_T2qC2TomcxJLo4a-me42QwAHp4rzXwBqAHBpzX1W7e8AyA/exec";
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbwsI91SVLrgUkHX0VCIXGlo0SnWbtdJ88k5DuBEF3Q7qJxofwbJGeOVW8yrp5IpNGC9rw/exec";
   const POLL_ESTADO_MS = 20000;
   const POLL_HISTORIAL_MS = 60000;
 
@@ -367,12 +440,13 @@
   let historialError = false;
   let actualizandoHistorial = false;
 
-  // Estado del modal de edición
   let modalEditId = null;
-  let modalEditOrigen = null;       // "local" | "servidor"
-  let modalEditTipo = null;         // "Ingreso" | "Egreso"
-  let modalEditContraparteRaw = null; // ISO de la marca pareja (para validar consistencia)
+  let modalEditOrigen = null;
+  let modalEditTipo = null;
+  let modalEditContraparteRaw = null;
   let modalGuardando = false;
+
+  let rangoReporteSeleccionado = "semana_actual";
 
   // ---------- Time helpers ----------
   function roundToNearest15(date){
@@ -395,6 +469,10 @@
   function fmtDateShort(date){
     const d = new Date(date);
     return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`;
+  }
+  function fmtDateLarga(date){
+    const d = new Date(date);
+    return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
   }
   function dateOnlyISO(date){
     const d = new Date(date); d.setHours(0,0,0,0);
@@ -460,8 +538,6 @@
     return candidatos[0].tipo === "Egreso" ? "fuera" : "trabajando";
   }
 
-  // Reconstruye sesiones (entrada+salida), guardando el ID individual de cada
-  // marca (entradaId / salidaId) porque cada una es una fila distinta en la hoja.
   function buildSesiones(marcasOrdenadas){
     const sesiones = [];
     let abierta = null;
@@ -532,7 +608,7 @@
       body: JSON.stringify({ accion: "editar", id, fecha: nuevaFecha, horaEditada })
     });
     if(!res.ok) throw new Error("HTTP " + res.status);
-    return res.json(); // { status:"ok" } | { status:"error", motivo }
+    return res.json();
   }
 
   async function consultarEstadoServidor(){
@@ -715,8 +791,8 @@
   }
 
   async function guardarEdicion(){
-    const nuevaFecha = document.getElementById("editModalDateInput").value; // YYYY-MM-DD
-    const nuevaHora = document.getElementById("editModalTimeInput").value;  // HH:MM
+    const nuevaFecha = document.getElementById("editModalDateInput").value;
+    const nuevaHora = document.getElementById("editModalTimeInput").value;
 
     if(!nuevaFecha){ mostrarErrorModal("Ingresá una fecha válida."); return; }
     if(!nuevaHora){ mostrarErrorModal("Ingresá una hora válida."); return; }
@@ -724,8 +800,6 @@
     const nuevoMomento = new Date(`${nuevaFecha}T${nuevaHora}:00`);
     if(isNaN(nuevoMomento.getTime())){ mostrarErrorModal("Fecha u hora inválida."); return; }
 
-    // Aviso (no bloqueante) si la corrección deja el ingreso/egreso en un orden
-    // inconsistente respecto de su contraparte de la misma sesión.
     if(modalEditContraparteRaw){
       const contraparte = new Date(modalEditContraparteRaw);
       const inconsistente =
@@ -775,6 +849,168 @@
     }finally{
       setModalGuardando(false);
     }
+  }
+
+  // ---------- Reportes (CSV / PDF) ----------
+  function calcularRangoReporte(tipo){
+    const now = new Date();
+    if(tipo === "semana_actual") return getWeekRange(now);
+    if(tipo === "semana_anterior"){
+      const prev = new Date(now); prev.setDate(prev.getDate() - 7);
+      return getWeekRange(prev);
+    }
+    if(tipo === "mes_actual"){
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0); end.setHours(23,59,59,999);
+      return { start, end };
+    }
+    if(tipo === "mes_anterior"){
+      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const end = new Date(now.getFullYear(), now.getMonth(), 0); end.setHours(23,59,59,999);
+      return { start, end };
+    }
+    if(tipo === "personalizado"){
+      const desdeStr = document.getElementById("reportDesde").value;
+      const hastaStr = document.getElementById("reportHasta").value;
+      if(!desdeStr || !hastaStr) return null;
+      const start = new Date(`${desdeStr}T00:00:00`);
+      const end = new Date(`${hastaStr}T23:59:59`);
+      if(isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return null;
+      return { start, end };
+    }
+    return null;
+  }
+
+  function obtenerFilasReporte(start, end){
+    const combinadas = getMarcasCombinadas();
+    const sesiones = buildSesiones(combinadas);
+    const filtradas = sesiones
+      .filter(s => {
+        const ref = s.entradaRaw || s.salidaRaw;
+        if(!ref) return false;
+        const d = new Date(ref);
+        return d >= start && d <= end;
+      })
+      .sort((a,b) => new Date(a.entradaRaw || a.salidaRaw) - new Date(b.entradaRaw || b.salidaRaw));
+
+    return filtradas.map(s => {
+      const ref = s.entradaRaw || s.salidaRaw;
+      const refDate = new Date(ref);
+      const horasDecimal = (s.entradaRounded && s.salidaRounded)
+        ? hoursDecimal(new Date(s.entradaRounded).getTime(), new Date(s.salidaRounded).getTime())
+        : 0;
+      let observaciones = "";
+      if(!s.entradaRounded) observaciones = "Sin ingreso registrado";
+      else if(!s.salidaRounded) observaciones = "En curso / sin egreso";
+
+      return {
+        fecha: fmtDateLarga(refDate),
+        dia: DIAS[refDate.getDay()],
+        horaIngreso: s.entradaRounded ? fmtTime(s.entradaRounded) : "—",
+        horaEgreso: s.salidaRounded ? fmtTime(s.salidaRounded) : "—",
+        horasDecimal,
+        horasLabel: (s.entradaRounded && s.salidaRounded) ? fmtHoursMin(horasDecimal) : "—",
+        observaciones
+      };
+    });
+  }
+
+  function nombreArchivoReporte(rango, ext){
+    return `reporte_ingreso_egreso_${dateOnlyISO(rango.start)}_a_${dateOnlyISO(rango.end)}.${ext}`;
+  }
+
+  function actualizarPreviewReporte(){
+    const preview = document.getElementById("reportPreview");
+    const rango = calcularRangoReporte(rangoReporteSeleccionado);
+    if(!rango){
+      preview.textContent = "Seleccioná las dos fechas del rango personalizado.";
+      return;
+    }
+    const filas = obtenerFilasReporte(rango.start, rango.end);
+    const totalHoras = filas.reduce((acc,f) => acc + f.horasDecimal, 0);
+    preview.textContent = `${fmtDateShort(rango.start)} — ${fmtDateShort(rango.end)} · ${filas.length} registro(s) · Total: ${fmtHoursMin(totalHoras)} h`;
+  }
+
+  function escaparCSV(valor){
+    const str = String(valor ?? "");
+    if(str.includes(";") || str.includes('"') || str.includes("\n")){
+      return `"${str.replace(/"/g,'""')}"`;
+    }
+    return str;
+  }
+
+  function descargarBlob(blob, filename){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  function descargarReporteCSV(){
+    const rango = calcularRangoReporte(rangoReporteSeleccionado);
+    if(!rango){ showToast("Seleccioná un rango de fechas válido.", "warning"); return; }
+    const filas = obtenerFilasReporte(rango.start, rango.end);
+    if(filas.length === 0){ showToast("No hay registros en el rango seleccionado.", "warning"); return; }
+
+    const header = ["Fecha","Día","Hora Ingreso","Hora Egreso","Total Horas","Observaciones"];
+    const lineas = [header.join(";")];
+    filas.forEach(f => {
+      lineas.push([f.fecha, f.dia, f.horaIngreso, f.horaEgreso, f.horasLabel, f.observaciones].map(escaparCSV).join(";"));
+    });
+    const totalHoras = filas.reduce((acc,f) => acc + f.horasDecimal, 0);
+    lineas.push(["", "", "", "TOTAL", fmtHoursMin(totalHoras), ""].map(escaparCSV).join(";"));
+
+    const csvContent = "\uFEFF" + lineas.join("\r\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    descargarBlob(blob, nombreArchivoReporte(rango, "csv"));
+    showToast("Reporte CSV descargado", "success");
+  }
+
+  function descargarReportePDF(){
+    const rango = calcularRangoReporte(rangoReporteSeleccionado);
+    if(!rango){ showToast("Seleccioná un rango de fechas válido.", "warning"); return; }
+    const filas = obtenerFilasReporte(rango.start, rango.end);
+    if(filas.length === 0){ showToast("No hay registros en el rango seleccionado.", "warning"); return; }
+
+    if(!window.jspdf || !window.jspdf.jsPDF){
+      showToast("No se pudo cargar el generador de PDF. Verificá tu conexión e intentá de nuevo.", "error");
+      return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+
+    doc.setFontSize(16);
+    doc.setTextColor(14,42,71);
+    doc.text("Reporte de Ingreso y Egreso", 40, 45);
+
+    doc.setFontSize(10);
+    doc.setTextColor(90,100,110);
+    doc.text(`Periodo: ${fmtDateLarga(rango.start)} al ${fmtDateLarga(rango.end)}`, 40, 63);
+    doc.text(`Generado el ${fmtDateLarga(new Date())} a las ${fmtTime(new Date())}`, 40, 76);
+
+    const totalHoras = filas.reduce((acc,f) => acc + f.horasDecimal, 0);
+    const body = filas.map(f => [f.fecha, f.dia, f.horaIngreso, f.horaEgreso, f.horasLabel, f.observaciones || "-"]);
+    body.push(["", "", "", "TOTAL", fmtHoursMin(totalHoras), ""]);
+
+    doc.autoTable({
+      startY: 92,
+      head: [["Fecha","Día","Ingreso","Egreso","Horas","Observaciones"]],
+      body: body,
+      headStyles: { fillColor: [14,42,71], textColor: 255, fontStyle: "bold" },
+      styles: { fontSize: 9, cellPadding: 6 },
+      alternateRowStyles: { fillColor: [242,245,248] },
+      didParseCell: function(data){
+        if(data.row.index === body.length - 1){
+          data.cell.styles.fontStyle = "bold";
+          data.cell.styles.fillColor = [231,244,238];
+        }
+      }
+    });
+
+    doc.save(nombreArchivoReporte(rango, "pdf"));
+    showToast("Reporte PDF descargado", "success");
   }
 
   // ---------- Rendering ----------
@@ -995,6 +1231,7 @@
     renderFuenteNube();
     renderConflictBanner();
     renderWeeks();
+    actualizarPreviewReporte();
 
     const btn = document.getElementById("btnRefreshHist");
     if(actualizandoHistorial) btn.classList.add("spinning"); else btn.classList.remove("spinning");
@@ -1029,6 +1266,29 @@
   document.getElementById("editModalOverlay").addEventListener("click", (ev) => {
     if(ev.target.id === "editModalOverlay" && !modalGuardando) cerrarModalEdicion();
   });
+
+  const chips = document.querySelectorAll(".range-chip");
+  chips.forEach(chip => {
+    chip.addEventListener("click", () => {
+      chips.forEach(c => c.classList.remove("active"));
+      chip.classList.add("active");
+      rangoReporteSeleccionado = chip.dataset.range;
+      document.getElementById("reportCustomDates").style.display =
+        rangoReporteSeleccionado === "personalizado" ? "grid" : "none";
+      if(rangoReporteSeleccionado === "personalizado"){
+        const hoyISO = dateOnlyISO(new Date());
+        if(!document.getElementById("reportDesde").value) document.getElementById("reportDesde").value = hoyISO;
+        if(!document.getElementById("reportHasta").value) document.getElementById("reportHasta").value = hoyISO;
+      }
+      actualizarPreviewReporte();
+    });
+  });
+  chips[0].classList.add("active");
+
+  document.getElementById("reportDesde").addEventListener("change", actualizarPreviewReporte);
+  document.getElementById("reportHasta").addEventListener("change", actualizarPreviewReporte);
+  document.getElementById("btnReportCSV").addEventListener("click", descargarReporteCSV);
+  document.getElementById("btnReportPDF").addEventListener("click", descargarReportePDF);
 
   window.addEventListener("online", () => {
     render();
