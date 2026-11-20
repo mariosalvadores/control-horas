@@ -147,6 +147,24 @@
     .dot.out { background: var(--red); }
     .status-sub { font-size: 0.78rem; color: var(--muted); margin-top: 6px; }
 
+    /* GPS Box */
+    .gps-box {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      font-size: 0.8rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .gps-box.ok { border-color: rgba(16,185,129,0.5); background: rgba(16,185,129,0.08); }
+    .gps-box.err { border-color: rgba(239,68,68,0.5); background: rgba(239,68,68,0.08); }
+    .gps-info { color: var(--text); }
+    .gps-sub { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+
     /* Buttons */
     .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
     button {
@@ -394,7 +412,7 @@
     <div class="tabs">
       <button class="tab-btn active" data-tab="fichar">Fichar</button>
       <button class="tab-btn" data-tab="historial">Historial</button>
-      <button class="tab-btn" data-tab="pagos">Pagos y Reportes</button>
+      <button class="tab-btn" data-tab="pagos" id="tabBtnPagos">Pagos y Reportes</button>
     </div>
 
     <!-- TAB 1: FICHAR -->
@@ -412,6 +430,15 @@
             <span id="statusText">Verificando estado...</span>
           </div>
           <div id="statusSub" class="status-sub"></div>
+        </div>
+
+        <!-- Estado de ubicación GPS -->
+        <div id="gpsStatusBox" class="gps-box">
+          <div>
+            <div id="gpsStatusText" class="gps-info">Verificando ubicación GPS...</div>
+            <div id="gpsStatusSub" class="gps-sub">Necesario para validar presencia en el local</div>
+          </div>
+          <button type="button" id="btnRefreshGps" class="btn-secondary btn-sm">Ubicar</button>
         </div>
 
         <div class="btn-grid">
@@ -440,6 +467,26 @@
             <div class="stat-lbl">Días trabajados</div>
           </div>
         </div>
+      </div>
+
+      <!-- Configuración de Geocerca GPS (Solo Admin) -->
+      <div id="adminGpsConfigCard" class="card hidden">
+        <div class="card-title">
+          <span>Ubicación del Establecimiento (GPS)</span>
+        </div>
+        <div id="gpsConfigCurrent" style="font-size:0.8rem;color:var(--muted);margin-bottom:10px;">
+          Cargando coordenadas...
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label>Radio permitido (metros)</label>
+            <input type="number" id="cfgRadioMetros" min="15" max="1000" step="5" value="80" />
+          </div>
+          <div class="field" style="display:flex;align-items:flex-end;">
+            <button type="button" id="btnFijarUbicacionActual" class="btn-secondary" style="width:100%;">Usar mi GPS actual</button>
+          </div>
+        </div>
+        <button type="button" id="btnGuardarConfigGps" class="btn-primary btn-sm">Guardar ubicación del local</button>
       </div>
     </section>
 
@@ -483,7 +530,8 @@
         <div id="pagosLista"></div>
       </div>
 
-      <div class="card">
+      <!-- Exportar Reportes: EXCLUSIVO ADMIN -->
+      <div id="adminReportCard" class="card hidden">
         <div class="card-title"><span>Exportar Reporte de Horas</span></div>
         <div class="chips" id="reportRangeGroup">
           <button class="chip active" data-val="semana">Esta semana</button>
@@ -587,9 +635,27 @@
 
   // Estado de sesión y multi-empleado
   let currentUser = null;
-  let currentPerfil = null; // { id, nombre, email, rol, valor_hora_default }
-  let listaEmpleados = [];  // lista de perfiles (para admin)
+  let currentPerfil = null;
+  let listaEmpleados = [];
   let selectedEmpleadoId = null;
+
+  // Configuración GPS del establecimiento (San Luis 529, Salta por defecto)
+  let configLocal = {
+    latitud: -24.79595,
+    longitud: -65.41265,
+    radio_metros: 80
+  };
+
+  // Estado GPS actual del dispositivo
+  let gpsState = {
+    verificando: false,
+    ok: false,
+    lat: null,
+    lng: null,
+    accuracy: null,
+    distancia: null,
+    errorMsg: "Ubicación no verificada"
+  };
 
   // Estado de datos del empleado seleccionado
   let estadoServidor = { cargado: false, error: false, tipo: null, timestamp: null };
@@ -642,18 +708,153 @@
     return dt;
   }
 
+  // Cálculo de distancia Haversine en metros
+  function calcularDistanciaMetros(lat1, lon1, lat2, lon2){
+    const R = 6371000;
+    const toRad = (deg) => deg * Math.PI / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
   let toastTimer = null;
   function showToast(msg, type = ""){
     const el = document.getElementById("toast");
     el.textContent = msg;
     el.className = "toast show " + type;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { el.className = "toast"; }, 3200);
+    toastTimer = setTimeout(() => { el.className = "toast"; }, 3400);
   }
 
   function esAdmin(){ return currentPerfil && currentPerfil.rol === "admin"; }
   function getEmpleadoActivo(){
     return listaEmpleados.find(e => e.id === selectedEmpleadoId) || currentPerfil;
+  }
+
+  // ================= GPS Y GEOCERCA =================
+  async function cargarConfiguracionLocal(){
+    try{
+      const { data, error } = await sb
+        .from("configuracion_local")
+        .select("*")
+        .eq("id", 1)
+        .single();
+      if(!error && data){
+        configLocal = {
+          latitud: Number(data.latitud),
+          longitud: Number(data.longitud),
+          radio_metros: Number(data.radio_metros) || 80
+        };
+      }
+    }catch(e){
+      console.warn("Usando configuración GPS por defecto:", e);
+    }
+    actualizarUIConfigGps();
+  }
+
+  function actualizarUIConfigGps(){
+    const infoEl = document.getElementById("gpsConfigCurrent");
+    const radioEl = document.getElementById("cfgRadioMetros");
+    if(infoEl){
+      infoEl.textContent = `Coordenadas actuales: ${configLocal.latitud.toFixed(6)}, ${configLocal.longitud.toFixed(6)} (Radio: ${configLocal.radio_metros} m)`;
+    }
+    if(radioEl){
+      radioEl.value = configLocal.radio_metros;
+    }
+  }
+
+  function verificarUbicacionGPS(silencioso = true){
+    return new Promise((resolve) => {
+      if(!("geolocation" in navigator)){
+        gpsState = {
+          verificando: false, ok: false, lat: null, lng: null, accuracy: null, distancia: null,
+          errorMsg: "Este navegador/dispositivo no soporta GPS."
+        };
+        renderGpsBox();
+        render();
+        return resolve(gpsState);
+      }
+
+      gpsState.verificando = true;
+      renderGpsBox();
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          const accuracy = Math.round(pos.coords.accuracy || 0);
+          const dist = Math.round(calcularDistanciaMetros(lat, lng, configLocal.latitud, configLocal.longitud));
+          const dentro = dist <= configLocal.radio_metros;
+
+          gpsState = {
+            verificando: false,
+            ok: dentro,
+            lat,
+            lng,
+            accuracy,
+            distancia: dist,
+            errorMsg: dentro ? "" : `Estás a ${dist} m del establecimiento (máx. ${configLocal.radio_metros} m)`
+          };
+          renderGpsBox();
+          render();
+          if(!silencioso){
+            showToast(
+              dentro ? `Ubicación verificada (${dist} m del local)` : `Fuera del establecimiento (${dist} m)`,
+              dentro ? "success" : "warning"
+            );
+          }
+          resolve(gpsState);
+        },
+        (err) => {
+          let msg = "No se pudo obtener la ubicación GPS.";
+          if(err.code === 1) msg = "Permiso de ubicación denegado. Activá el GPS para fichar.";
+          else if(err.code === 2) msg = "Señal GPS no disponible en este momento.";
+          else if(err.code === 3) msg = "Tiempo de espera agotado al buscar GPS.";
+
+          gpsState = {
+            verificando: false, ok: false, lat: null, lng: null, accuracy: null, distancia: null,
+            errorMsg: msg
+          };
+          renderGpsBox();
+          render();
+          if(!silencioso) showToast(msg, "error");
+          resolve(gpsState);
+        },
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 15000 }
+      );
+    });
+  }
+
+  function renderGpsBox(){
+    const box = document.getElementById("gpsStatusBox");
+    const txt = document.getElementById("gpsStatusText");
+    const sub = document.getElementById("gpsStatusSub");
+    if(!box) return;
+
+    if(gpsState.verificando){
+      box.className = "gps-box";
+      txt.textContent = "Obteniendo ubicación GPS...";
+      sub.textContent = "Aguarde un instante";
+      return;
+    }
+
+    if(gpsState.ok){
+      box.className = "gps-box ok";
+      txt.textContent = `Dentro del establecimiento (${gpsState.distancia} m)`;
+      sub.textContent = `Precisión GPS: ±${gpsState.accuracy} m · Listo para fichar`;
+    } else {
+      box.className = "gps-box err";
+      txt.textContent = esAdmin()
+        ? (gpsState.distancia !== null ? `Fuera del local (${gpsState.distancia} m) — Modo Admin habilitado` : "GPS sin señal — Modo Admin habilitado")
+        : gpsState.errorMsg;
+      sub.textContent = esAdmin()
+        ? "Como administrador podés fichar desde cualquier ubicación"
+        : `Debés estar dentro de ${configLocal.radio_metros} m de ${NEGOCIO_NOMBRE}`;
+    }
   }
 
   // ================= AUTENTICACIÓN Y PERFILES =================
@@ -687,6 +888,8 @@
     roleBadge.textContent = perfil.rol === "admin" ? "Admin" : "Empleado";
     roleBadge.className = "role-badge " + (perfil.rol === "admin" ? "admin" : "");
 
+    await cargarConfiguracionLocal();
+
     if(perfil.rol === "admin"){
       const { data: emps } = await sb
         .from("perfiles")
@@ -695,7 +898,6 @@
         .order("nombre", { ascending: true });
       listaEmpleados = emps && emps.length ? emps : [perfil];
 
-      // Por defecto, si hay empleados no-admin, seleccionar el primero; si no, el admin
       const primerEmp = listaEmpleados.find(e => e.rol === "empleado") || listaEmpleados[0];
       selectedEmpleadoId = primerEmp.id;
 
@@ -707,17 +909,25 @@
 
       document.getElementById("adminEmpBar").classList.remove("hidden");
       document.getElementById("adminManualBtnWrap").classList.remove("hidden");
+      document.getElementById("adminGpsConfigCard").classList.remove("hidden");
       document.getElementById("btnNuevoPago").classList.remove("hidden");
+      document.getElementById("adminReportCard").classList.remove("hidden");
+      document.getElementById("tabBtnPagos").textContent = "Pagos y Reportes";
     } else {
       listaEmpleados = [perfil];
       selectedEmpleadoId = perfil.id;
       document.getElementById("adminEmpBar").classList.add("hidden");
       document.getElementById("adminManualBtnWrap").classList.add("hidden");
+      document.getElementById("adminGpsConfigCard").classList.add("hidden");
       document.getElementById("btnNuevoPago").classList.add("hidden");
+      document.getElementById("adminReportCard").classList.add("hidden");
+      document.getElementById("tabBtnPagos").textContent = "Mis Pagos";
     }
 
     document.getElementById("authScreen").classList.add("hidden");
     document.getElementById("appScreen").classList.remove("hidden");
+
+    verificarUbicacionGPS(true);
     await recargarTodoEmpleado();
   }
 
@@ -764,7 +974,7 @@
     try{
       const { data, error } = await sb
         .from("marcas")
-        .select("id, tipo, timestamp_real, timestamp_redondeado")
+        .select("id, tipo, timestamp_real, timestamp_redondeado, latitud, longitud, distancia_metros")
         .eq("empleado_id", selectedEmpleadoId)
         .order("timestamp_real", { ascending: true });
       if(error) throw error;
@@ -772,7 +982,8 @@
         id: r.id,
         tipo: r.tipo,
         timestampReal: r.timestamp_real,
-        timestampRedondeado: r.timestamp_redondeado || r.timestamp_real
+        timestampRedondeado: r.timestamp_redondeado || r.timestamp_real,
+        distanciaMetros: r.distancia_metros
       }));
     }catch(err){
       console.warn("Error historial:", err);
@@ -807,17 +1018,27 @@
     render();
   }
 
-  // ================= FICHAR INGRESO / EGRESO =================
+  // ================= FICHAR INGRESO / EGRESO CON GPS =================
   async function registrarMarca(tipo){
     if(registrando || !selectedEmpleadoId) return;
     if(!navigator.onLine){
       showToast("Sin conexión a internet.", "error");
       return;
     }
+
     registrando = true;
     render();
 
     try{
+      // Revalidar GPS en el momento exacto de fichar
+      const gpsActual = await verificarUbicacionGPS(true);
+      if(!esAdmin() && !gpsActual.ok){
+        showToast(gpsActual.errorMsg || "Debés estar dentro del establecimiento para fichar.", "error");
+        registrando = false;
+        render();
+        return;
+      }
+
       const ahora = new Date();
       const redondeada = redondear15Min(ahora);
       const id = "m_" + Date.now() + "_" + Math.random().toString(36).slice(2,7);
@@ -827,17 +1048,18 @@
         p_tipo: tipo,
         p_timestamp_real: ahora.toISOString(),
         p_timestamp_redondeado: redondeada.toISOString(),
-        p_empleado_id: selectedEmpleadoId
+        p_empleado_id: selectedEmpleadoId,
+        p_latitud: gpsActual.lat,
+        p_longitud: gpsActual.lng,
+        p_distancia_metros: gpsActual.distancia
       });
 
       if(error) throw error;
       if(data && data.status === "rejected"){
-        showToast(
-          data.motivo === "no_autorizado"
-            ? "No tenés permisos para fichar por otro usuario."
-            : `Ya existe un ${tipo} registrado como último estado.`,
-          "warning"
-        );
+        let msgRechazo = `Ya existe un ${tipo} registrado como último estado.`;
+        if(data.motivo === "no_autorizado") msgRechazo = "No tenés permisos para fichar por otro usuario.";
+        else if(data.motivo === "fuera_de_rango") msgRechazo = "Ubicación fuera del establecimiento.";
+        showToast(msgRechazo, "warning");
       } else {
         showToast(`${tipo} registrado (${formatHoraAR(redondeada)})`, "success");
       }
@@ -908,6 +1130,9 @@
     const btnIn = document.getElementById("btnIngreso");
     const btnOut = document.getElementById("btnEgreso");
 
+    // El empleado solo puede fichar si su GPS está dentro del establecimiento
+    const habilitadoPorGps = esAdmin() || gpsState.ok;
+
     if(!estadoServidor.cargado){
       dot.className = "dot";
       stText.textContent = "Consultando servidor...";
@@ -919,14 +1144,14 @@
       stText.textContent = "EN TURNO (Trabajando)";
       stSub.textContent = `Ingresó el ${formatFechaAR(estadoServidor.timestamp)} a las ${formatHoraAR(estadoServidor.timestamp)}`;
       btnIn.disabled = true;
-      btnOut.disabled = registrando || !online;
+      btnOut.disabled = registrando || !online || !habilitadoPorGps;
     } else {
       dot.className = "dot out";
       stText.textContent = "FUERA DE TURNO";
       stSub.textContent = estadoServidor.timestamp
         ? `Último egreso: ${formatFechaAR(estadoServidor.timestamp)} a las ${formatHoraAR(estadoServidor.timestamp)}`
         : "Sin marcas previas registradas";
-      btnIn.disabled = registrando || !online;
+      btnIn.disabled = registrando || !online || !habilitadoPorGps;
       btnOut.disabled = true;
     }
 
@@ -944,7 +1169,7 @@
 
     renderHistorial();
     renderPagos();
-    actualizarPreviewReporte();
+    if(esAdmin()) actualizarPreviewReporte();
   }
 
   function renderHistorial(){
@@ -965,7 +1190,6 @@
       return;
     }
 
-    // Agrupar por día (descendente)
     const grupos = {};
     for(const m of filtradas){
       const k = toLocalDateStr(m.timestampRedondeado);
@@ -983,6 +1207,9 @@
           <div>
             <span class="${m.tipo === "INGRESO" ? "badge-in" : "badge-out"}">${m.tipo}</span>
             <span style="margin-left:8px;font-weight:700;">${formatHoraAR(m.timestampRedondeado)}</span>
+            ${esAdmin() && m.distanciaMetros !== null && m.distanciaMetros !== undefined
+              ? `<span style="margin-left:6px;font-size:0.72rem;color:var(--muted);">(${m.distanciaMetros} m)</span>`
+              : ""}
           </div>
           ${esAdmin() ? `
             <div class="marca-actions">
@@ -1014,10 +1241,11 @@
 
     const cont = document.getElementById("pagosLista");
     if(!pagosServidor.length){
-      cont.innerHTML = `<div class="empty-msg">Aún no hay liquidaciones registradas para este empleado.</div>`;
+      cont.innerHTML = `<div class="empty-msg">Aún no hay liquidaciones registradas.</div>`;
       return;
     }
 
+    // El empleado solo consulta sus pagos; NO tiene botones de imprimir/descargar PDF ni eliminar
     cont.innerHTML = pagosServidor.map(p => `
       <div class="pay-item">
         <div class="pay-top">
@@ -1028,12 +1256,49 @@
           </div>
           <div class="pay-amount">${formatMoney(p.monto)}</div>
         </div>
-        <div class="pay-actions">
-          <button class="btn-secondary btn-sm" data-pay-pdf="${p.id}">Recibo PDF</button>
-          ${esAdmin() ? `<button class="btn-danger-ghost btn-sm" data-pay-del="${p.id}">Eliminar</button>` : ""}
-        </div>
+        ${esAdmin() ? `
+          <div class="pay-actions">
+            <button class="btn-secondary btn-sm" data-pay-pdf="${p.id}">Recibo PDF</button>
+            <button class="btn-danger-ghost btn-sm" data-pay-del="${p.id}">Eliminar</button>
+          </div>
+        ` : ""}
       </div>
     `).join("");
+  }
+
+  // ================= ADMIN: CONFIGURAR GPS DEL LOCAL =================
+  async function fijarUbicacionActualComoLocal(){
+    if(!esAdmin()) return;
+    const gps = await verificarUbicacionGPS(false);
+    if(gps.lat !== null && gps.lng !== null){
+      configLocal.latitud = gps.lat;
+      configLocal.longitud = gps.lng;
+      actualizarUIConfigGps();
+      showToast("Coordenadas capturadas. Tocá 'Guardar ubicación del local'.", "success");
+    }
+  }
+
+  async function guardarConfiguracionGps(){
+    if(!esAdmin()) return;
+    const radio = Math.max(15, Math.min(1000, Number(document.getElementById("cfgRadioMetros").value) || 80));
+    try{
+      const { error } = await sb
+        .from("configuracion_local")
+        .upsert({
+          id: 1,
+          latitud: configLocal.latitud,
+          longitud: configLocal.longitud,
+          radio_metros: radio,
+          updated_at: new Date().toISOString()
+        });
+      if(error) throw error;
+      configLocal.radio_metros = radio;
+      actualizarUIConfigGps();
+      await verificarUbicacionGPS(true);
+      showToast("Ubicación y radio del establecimiento guardados.", "success");
+    }catch(err){
+      showToast("Error al guardar configuración GPS: " + err.message, "error");
+    }
   }
 
   // ================= ADMIN: MARCA MANUAL / EDICIÓN / BORRADO =================
@@ -1160,6 +1425,7 @@
   }
 
   function generarPdfReciboPago(p){
+    if(!esAdmin()) return;
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     const emp = getEmpleadoActivo();
@@ -1190,7 +1456,7 @@
     doc.save(`Recibo_${(emp ? emp.nombre : "Empleado").replace(/\s+/g,"_")}_${p.fechaPago}.pdf`);
   }
 
-  // ================= REPORTES CSV / PDF =================
+  // ================= REPORTES CSV / PDF (SOLO ADMIN) =================
   function getRangoReporteFechas(){
     const hoy = new Date();
     const hasta = toLocalDateStr(hoy);
@@ -1211,6 +1477,7 @@
   }
 
   function actualizarPreviewReporte(){
+    if(!esAdmin()) return;
     const { desde, hasta } = getRangoReporteFechas();
     const sesiones = calcularJornadas(historialServidor).filter(s => s.fecha >= desde && s.fecha <= hasta);
     const totalHoras = sesiones.reduce((a,b) => a + b.horas, 0);
@@ -1219,6 +1486,7 @@
   }
 
   function descargarReporteCSV(){
+    if(!esAdmin()) return;
     const { desde, hasta } = getRangoReporteFechas();
     const emp = getEmpleadoActivo();
     const sesiones = calcularJornadas(historialServidor).filter(s => s.fecha >= desde && s.fecha <= hasta);
@@ -1235,6 +1503,7 @@
   }
 
   function descargarReportePDF(){
+    if(!esAdmin()) return;
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     const { desde, hasta } = getRangoReporteFechas();
@@ -1316,7 +1585,10 @@
     });
   });
 
-  // Fichar
+  // GPS y Fichar
+  document.getElementById("btnRefreshGps").addEventListener("click", () => verificarUbicacionGPS(false));
+  document.getElementById("btnFijarUbicacionActual").addEventListener("click", fijarUbicacionActualComoLocal);
+  document.getElementById("btnGuardarConfigGps").addEventListener("click", guardarConfiguracionGps);
   document.getElementById("btnIngreso").addEventListener("click", () => registrarMarca("INGRESO"));
   document.getElementById("btnEgreso").addEventListener("click", () => registrarMarca("EGRESO"));
 
@@ -1402,7 +1674,7 @@
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js?v=4").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=5").catch(() => {});
   });
 }
 </script>
