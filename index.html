@@ -1,2423 +1,1408 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Control de Ingreso y Egreso</title>
-<meta name="theme-color" content="#0E2A47">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Control Horas">
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-192.png">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230E2A47'/%3E%3Ccircle cx='32' cy='34' r='18' fill='none' stroke='white' stroke-width='4'/%3E%3Cpath d='M32 24 V34 L40 40' stroke='white' stroke-width='4' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Ccircle cx='48' cy='16' r='7' fill='%231D7A55'/%3E%3C/svg%3E">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-<style>
-  :root{
-    --azul-oscuro:#0E2A47;
-    --azul-medio:#15436E;
-    --azul-claro:#2E6DA4;
-    --gris-claro:#F2F5F8;
-    --gris-borde:#DCE3EA;
-    --gris-texto:#5C6B7A;
-    --blanco:#FFFFFF;
-    --verde-ingreso:#1D7A55;
-    --verde-ingreso-dark:#155C40;
-    --rojo-egreso:#B3452F;
-    --rojo-egreso-dark:#8F3524;
-    --ambar:#B7791F;
-    --gris-disabled-bg:#CDD5DC;
-    --gris-disabled-txt:#7C8894;
-    --radius-lg:18px;
-    --radius-md:12px;
-    --shadow:0 2px 10px rgba(14,42,71,0.08);
-    --shadow-lg:0 8px 24px rgba(14,42,71,0.14);
-  }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>Control de Horas — Floreria San Jorge</title>
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" type="image/png" href="./icon-192.png" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-2: #273549;
+      --border: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --green: #10b981;
+      --green-dark: #059669;
+      --red: #ef4444;
+      --red-dark: #dc2626;
+      --blue: #3b82f6;
+      --blue-dark: #2563eb;
+      --amber: #f59e0b;
+      --radius: 16px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 16px 14px 48px;
+      line-height: 1.4;
+    }
+    .container { max-width: 560px; margin: 0 auto; }
 
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
-  body{
-    font-family:'Inter',system-ui,-apple-system,sans-serif;
-    background:var(--gris-claro);
-    color:var(--azul-oscuro);
-    min-height:100vh;
-    padding-bottom:40px;
-    -webkit-font-smoothing:antialiased;
-  }
+    /* Auth Screen */
+    .auth-wrapper {
+      min-height: 85vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .auth-card {
+      width: 100%;
+      max-width: 400px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px 22px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    }
+    .auth-brand { text-align: center; margin-bottom: 22px; }
+    .auth-brand h1 { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; }
+    .auth-brand p { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
 
-  .app{max-width:480px;margin:0 auto;padding:0 16px;}
+    /* Top Bar / Header */
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      padding: 10px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .topbar-biz { font-weight: 800; font-size: 0.95rem; color: var(--text); }
+    .topbar-user { font-size: 0.78rem; color: var(--muted); display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+    .role-badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(59,130,246,0.2);
+      color: #93c5fd;
+    }
+    .role-badge.admin { background: rgba(16,185,129,0.2); color: #6ee7b7; }
 
-  header.top{
-    background:var(--azul-oscuro);
-    color:var(--blanco);
-    padding:22px 20px 26px;
-    border-radius:0 0 24px 24px;
-    margin-bottom:18px;
-    box-shadow:var(--shadow-lg);
-    position:relative;
-  }
-  header.top .eyebrow{
-    font-size:12px;letter-spacing:1.5px;text-transform:uppercase;
-    color:#9DB4CC;font-weight:600;margin-bottom:6px;
-  }
-  header.top h1{margin:0 0 14px;font-size:20px;font-weight:700;}
-  .clock{font-family:'JetBrains Mono',monospace;font-size:34px;font-weight:700;letter-spacing:1px;line-height:1;}
-  .clock-date{font-size:13px;color:#B9CBDC;margin-top:6px;text-transform:capitalize;}
+    /* Employee Selector Bar (Admin) */
+    .emp-bar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .emp-bar label { font-size: 0.8rem; font-weight: 700; color: var(--muted); white-space: nowrap; }
+    .emp-bar select {
+      flex: 1;
+      background: var(--surface-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      outline: none;
+    }
 
-  .conn-badge{
-    position:absolute;top:18px;right:18px;
-    display:flex;align-items:center;gap:6px;
-    padding:6px 11px;border-radius:999px;
-    background:rgba(255,255,255,0.08);
-    font-size:11px;font-weight:600;color:#E4ECF3;
-  }
-  .conn-dot{width:7px;height:7px;border-radius:50%;background:#3FCB8E;}
-  .conn-badge.offline .conn-dot{background:#E0A93F;}
-  .conn-badge.offline{color:#F3DFAF;}
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      margin-bottom: 14px;
+    }
+    .card-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
 
-  .status-row{
-    display:flex;align-items:center;gap:8px;margin-top:16px;
-    padding:10px 14px;background:rgba(255,255,255,0.08);
-    border-radius:999px;width:fit-content;
-  }
-  .status-dot{width:9px;height:9px;border-radius:50%;background:#6C7E90;flex-shrink:0;}
-  .status-dot.active{background:#3FCB8E;box-shadow:0 0 0 4px rgba(63,203,142,0.25);}
-  .status-row span{font-size:13px;color:#E4ECF3;font-weight:500;}
+    /* Clock & Status */
+    .clock-box { text-align: center; padding: 6px 0 12px; }
+    .clock-time { font-size: 2.7rem; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
+    .clock-date { font-size: 0.88rem; color: var(--muted); text-transform: capitalize; margin-top: 2px; }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+    }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
+    .dot.in { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .dot.out { background: var(--red); }
+    .status-sub { font-size: 0.78rem; color: var(--muted); margin-top: 6px; }
 
-  .estado-box{
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-    padding:14px 16px;border-radius:var(--radius-md);margin-bottom:14px;
-    border:2px solid transparent;transition:background .2s ease, border-color .2s ease, color .2s ease;
-  }
-  .estado-box .estado-linea{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;}
-  .estado-box .estado-emoji{font-size:18px;}
-  .estado-box .estado-verificacion{font-size:11px;font-weight:600;opacity:0.85;}
-  .estado-box.trabajando{background:#E7F4EE;color:var(--verde-ingreso-dark);border-color:var(--verde-ingreso);}
-  .estado-box.fuera{background:#FBEAE6;color:var(--rojo-egreso-dark);border-color:var(--rojo-egreso);}
-  .estado-box.cargando{background:#EEF2F6;color:var(--gris-texto);border-color:var(--gris-borde);}
+    /* Buttons */
+    .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+    button {
+      font-family: inherit;
+      border: none;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.08s ease, opacity 0.15s ease;
+    }
+    button:active:not(:disabled) { transform: scale(0.98); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-in { background: var(--green); color: #052e16; padding: 16px 12px; font-size: 1rem; }
+    .btn-out { background: var(--red); color: #fff; padding: 16px 12px; font-size: 1rem; }
+    .btn-secondary {
+      background: var(--surface-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      font-size: 0.85rem;
+    }
+    .btn-primary { background: var(--blue); color: #fff; padding: 12px 16px; font-size: 0.92rem; width: 100%; }
+    .btn-sm { padding: 6px 10px; font-size: 0.78rem; border-radius: 8px; }
+    .btn-danger-ghost { background: rgba(239,68,68,0.15); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
 
-  .punch-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
-  .punch-btn{
-    border:none;border-radius:var(--radius-lg);padding:22px 12px;
-    display:flex;flex-direction:column;align-items:center;gap:8px;
-    font-family:inherit;cursor:pointer;
-    transition:transform .12s ease, box-shadow .12s ease, background .2s ease, color .2s ease;
-    box-shadow:var(--shadow);color:var(--blanco);
-  }
-  .punch-btn:active{transform:scale(0.96);}
-  .punch-btn.ingreso{background:linear-gradient(160deg,var(--verde-ingreso),var(--verde-ingreso-dark));}
-  .punch-btn.egreso{background:linear-gradient(160deg,var(--rojo-egreso),var(--rojo-egreso-dark));}
-  .punch-btn:disabled{
-    background:var(--gris-disabled-bg) !important;color:var(--gris-disabled-txt) !important;
-    box-shadow:none;opacity:1;cursor:not-allowed;transform:none;pointer-events:none;
-  }
-  .punch-btn .icon{font-size:26px;line-height:1;}
-  .punch-btn .label{font-size:15px;font-weight:700;letter-spacing:.3px;}
-  .punch-btn .sub{font-size:11px;opacity:.85;font-weight:500;}
+    /* Forms */
+    .field { margin-bottom: 12px; }
+    .field label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--muted); margin-bottom: 5px; }
+    .field input, .field select, .field textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 0.92rem;
+      font-family: inherit;
+      outline: none;
+    }
+    .field input:focus, .field select:focus { border-color: var(--blue); }
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-  .manual-add-wrap{text-align:center;margin-bottom:18px;}
-  .manual-add-btn{
-    background:var(--blanco);border:1.5px dashed var(--azul-claro);color:var(--azul-medio);
-    font-family:inherit;font-weight:700;font-size:12.5px;
-    padding:10px 16px;border-radius:12px;cursor:pointer;
-    display:inline-flex;align-items:center;gap:6px;
-    transition:all .15s ease;
-  }
-  .manual-add-btn:hover{background:var(--gris-claro);border-style:solid;}
+    /* Chips */
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    .chip {
+      background: var(--surface-2);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+    .chip.active { background: var(--blue); color: #fff; border-color: var(--blue); }
 
-  .card{
-    background:var(--blanco);border-radius:var(--radius-lg);padding:18px;
-    box-shadow:var(--shadow);margin-bottom:16px;border:1px solid var(--gris-borde);
-  }
-  .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
-  .card h2{
-    margin:0 0 4px;font-size:14px;font-weight:700;color:var(--azul-oscuro);
-    text-transform:uppercase;letter-spacing:0.6px;
-  }
-  .card .card-sub{font-size:12px;color:var(--gris-texto);margin-bottom:6px;}
-  .refresh-btn{
-    background:var(--gris-claro);border:1px solid var(--gris-borde);
-    color:var(--azul-medio);font-size:11px;font-weight:600;
-    padding:6px 10px;border-radius:8px;cursor:pointer;
-    display:flex;align-items:center;gap:5px;font-family:inherit;
-  }
-  .refresh-btn:hover{background:var(--gris-borde);}
-  .refresh-btn.spinning .refresh-icon{animation:spin 0.8s linear infinite;}
-  @keyframes spin{from{transform:rotate(0);}to{transform:rotate(360deg);}}
+    /* Tabs */
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      background: var(--surface);
+      padding: 5px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      margin-bottom: 14px;
+    }
+    .tab-btn {
+      background: transparent;
+      color: var(--muted);
+      padding: 9px 6px;
+      font-size: 0.82rem;
+      border-radius: 10px;
+    }
+    .tab-btn.active { background: var(--surface-2); color: var(--text); }
 
-  .fuente-nube{
-    font-size:10.5px;color:var(--gris-texto);margin-bottom:10px;
-    display:flex;align-items:center;gap:5px;
-  }
-  .fuente-nube.ok{color:var(--verde-ingreso-dark);}
-  .fuente-nube.error{color:var(--rojo-egreso-dark);}
+    /* Lists */
+    .summary-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .stat-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 8px;
+      text-align: center;
+    }
+    .stat-val { font-size: 1.05rem; font-weight: 800; }
+    .stat-lbl { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
 
-  .conflict-banner{
-    background:#FBEAE6;border:1px solid var(--rojo-egreso);color:var(--rojo-egreso-dark);
-    font-size:12px;font-weight:600;padding:10px 12px;border-radius:10px;margin-bottom:12px;
-  }
+    .day-group {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 10px;
+      background: var(--bg);
+    }
+    .day-head {
+      background: var(--surface-2);
+      padding: 8px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+    .marca-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 9px 12px;
+      border-top: 1px solid rgba(51,65,85,0.5);
+      font-size: 0.86rem;
+    }
+    .badge-in { color: var(--green); font-weight: 700; }
+    .badge-out { color: var(--red); font-weight: 700; }
+    .marca-actions { display: flex; gap: 6px; }
 
-  /* PAGOS */
-  .pay-pending{
-    background:linear-gradient(160deg,#EAF2FA,#F5F9FD);border:1px solid var(--gris-borde);
-    border-radius:var(--radius-md);padding:14px;margin:10px 0 12px;text-align:center;
-  }
-  .pay-pending-label{font-size:11px;font-weight:700;color:var(--gris-texto);text-transform:uppercase;letter-spacing:.5px;}
-  .pay-big{font-family:'JetBrains Mono',monospace;font-size:34px;font-weight:700;color:var(--azul-oscuro);margin:4px 0 2px;}
-  .pay-pending-sub{font-size:11.5px;color:var(--azul-medio);font-weight:600;}
-  .pay-main-btn{
-    width:100%;border:none;border-radius:12px;padding:14px;
-    background:linear-gradient(160deg,var(--verde-ingreso),var(--verde-ingreso-dark));
-    color:var(--blanco);font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;
-    transition:transform .12s ease;margin-bottom:12px;
-  }
-  .pay-main-btn:active{transform:scale(0.98);}
-  .pay-main-btn:disabled{opacity:.55;cursor:not-allowed;}
-  .pay-history{border:1px solid var(--gris-borde);border-radius:var(--radius-md);overflow:hidden;}
-  .pay-history summary{
-    list-style:none;cursor:pointer;padding:11px 14px;background:var(--gris-claro);
-    font-weight:700;font-size:12.5px;color:var(--azul-oscuro);
-  }
-  .pay-history summary::-webkit-details-marker{display:none;}
-  .pay-history[open] summary{border-bottom:1px solid var(--gris-borde);}
-  .pay-list{padding:4px 14px;}
-  .pay-item{
-    display:flex;justify-content:space-between;align-items:flex-start;gap:10px;
-    padding:11px 0;border-bottom:1px solid var(--gris-borde);
-  }
-  .pay-item:last-child{border-bottom:none;}
-  .pay-item-title{font-size:13px;font-weight:600;color:var(--azul-oscuro);}
-  .pay-item-title b{font-family:'JetBrains Mono',monospace;color:var(--verde-ingreso-dark);}
-  .pay-item-sub{font-size:11px;color:var(--gris-texto);margin-top:3px;line-height:1.4;}
-  .pay-item-note{font-size:11px;color:var(--azul-medio);margin-top:3px;font-style:italic;}
-  .pay-item-actions{display:flex;gap:2px;flex-shrink:0;}
-  .icon-btn{
-    border:none;background:none;cursor:pointer;font-size:15px;padding:5px;border-radius:7px;opacity:.7;
-  }
-  .icon-btn:hover{opacity:1;background:var(--gris-claro);}
-  .pay-empty{padding:16px 0;text-align:center;font-size:12px;color:var(--gris-texto);}
+    /* Pay items */
+    .pay-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    .pay-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .pay-amount { font-size: 1.1rem; font-weight: 800; color: var(--green); }
+    .pay-meta { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+    .pay-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
 
-  .week-details{border:1px solid var(--gris-borde);border-radius:var(--radius-md);margin-bottom:10px;overflow:hidden;}
-  .week-details:last-child{margin-bottom:0;}
-  .week-details summary{
-    list-style:none;cursor:pointer;padding:12px 14px;
-    display:flex;align-items:center;justify-content:space-between;
-    background:var(--gris-claro);font-weight:700;font-size:13px;color:var(--azul-oscuro);
-  }
-  .week-details summary::-webkit-details-marker{display:none;}
-  .week-details[open] summary{border-bottom:1px solid var(--gris-borde);}
-  .week-summary-left{display:flex;flex-direction:column;gap:2px;}
-  .week-summary-left .week-tag{font-size:10px;color:var(--azul-claro);text-transform:uppercase;letter-spacing:.4px;}
-  .week-total-badge{
-    font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;
-    color:var(--verde-ingreso-dark);background:#E7F4EE;padding:4px 10px;border-radius:8px;white-space:nowrap;
-  }
-  .week-sessions{padding:6px 14px 4px;}
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(2,6,23,0.78);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 50;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      width: 100%;
+      max-width: 440px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 20px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .modal-head h3 { font-size: 1.05rem; }
 
-  .history-item{
-    display:flex;justify-content:space-between;align-items:center;
-    padding:11px 0;border-bottom:1px solid var(--gris-borde);gap:10px;
-  }
-  .history-item:last-child{border-bottom:none;}
-  .hist-left{display:flex;flex-direction:column;gap:2px;}
-  .hist-day{font-size:13px;font-weight:700;color:var(--azul-oscuro);text-transform:capitalize;}
-  .hist-date{font-size:11px;color:var(--gris-texto);}
-  .hist-times{
-    font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--azul-medio);
-    display:flex;gap:4px;align-items:center;flex-wrap:wrap;
-  }
-  .hist-times .sep{color:var(--gris-texto);font-family:'Inter',sans-serif;}
-  .hist-times .pending{color:var(--rojo-egreso);font-style:italic;font-family:'Inter',sans-serif;font-size:11.5px;}
-  .time-chip{display:inline-flex;align-items:center;gap:3px;}
-  .edit-btn{
-    border:none;background:none;cursor:pointer;font-size:11px;
-    padding:2px 3px;line-height:1;opacity:0.55;border-radius:5px;
-  }
-  .edit-btn:hover{opacity:1;background:var(--gris-claro);}
-  .hist-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;}
-  .hist-hours{
-    font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;
-    color:var(--verde-ingreso-dark);background:#E7F4EE;padding:4px 9px;border-radius:8px;white-space:nowrap;
-  }
-  .sync-tag{font-size:10px;font-weight:600;display:flex;align-items:center;gap:3px;}
-  .sync-tag.synced{color:var(--verde-ingreso-dark);}
-  .sync-tag.pending{color:var(--ambar);}
+    /* Toast & Banners */
+    .banner-warn {
+      background: rgba(245,158,11,0.15);
+      border: 1px solid rgba(245,158,11,0.4);
+      color: #fcd34d;
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-size: 0.82rem;
+      margin-bottom: 12px;
+    }
+    .toast {
+      position: fixed;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #1e293b;
+      color: #f8fafc;
+      border: 1px solid var(--border);
+      padding: 11px 16px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.45);
+      transition: transform 0.25s ease;
+      z-index: 100;
+      max-width: 92vw;
+      text-align: center;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.success { border-color: var(--green); }
+    .toast.warning { border-color: var(--amber); }
+    .toast.error { border-color: var(--red); }
 
-  .empty-state{text-align:center;padding:28px 10px;color:var(--gris-texto);font-size:13px;}
-  .empty-state .icon{font-size:28px;display:block;margin-bottom:8px;}
-  .skeleton{padding:18px 0;text-align:center;color:var(--gris-texto);font-size:13px;}
-
-  .report-range-group{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
-  .range-chip{
-    border:1.5px solid var(--gris-borde);background:var(--gris-claro);
-    color:var(--azul-medio);font-size:12px;font-weight:600;
-    padding:8px 12px;border-radius:999px;cursor:pointer;font-family:inherit;
-    transition:all .15s ease;
-  }
-  .range-chip:hover{border-color:var(--azul-claro);}
-  .range-chip.active{background:var(--azul-oscuro);border-color:var(--azul-oscuro);color:var(--blanco);}
-  .report-custom-dates{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
-  .report-custom-dates label{font-size:11px;font-weight:600;color:var(--gris-texto);display:block;margin-bottom:5px;}
-  .report-custom-dates input[type="date"]{
-    width:100%;padding:10px;font-size:13px;font-family:'JetBrains Mono',monospace;
-    border:1.5px solid var(--gris-borde);border-radius:10px;color:var(--azul-oscuro);background:var(--gris-claro);
-  }
-  .report-preview{
-    background:var(--gris-claro);border:1px solid var(--gris-borde);border-radius:10px;
-    padding:10px 12px;font-size:12px;color:var(--azul-medio);font-weight:600;margin-bottom:14px;line-height:1.5;
-  }
-  .report-actions{display:flex;gap:10px;}
-  .report-btn{
-    flex:1;border:none;border-radius:12px;padding:13px 10px;
-    font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;color:var(--blanco);
-    display:flex;align-items:center;justify-content:center;gap:6px;
-    transition:transform .12s ease, opacity .15s ease;
-  }
-  .report-btn:active{transform:scale(0.97);}
-  .report-btn.csv{background:linear-gradient(160deg,var(--azul-medio),var(--azul-oscuro));}
-  .report-btn.pdf{background:linear-gradient(160deg,var(--rojo-egreso),var(--rojo-egreso-dark));}
-  .report-btn.print{background:linear-gradient(160deg,var(--azul-medio),var(--azul-oscuro));}
-  .report-btn:disabled{opacity:0.55;cursor:not-allowed;}
-
-  .footer-actions{text-align:center;margin-top:8px;display:flex;flex-direction:column;gap:8px;align-items:center;}
-  .footer-actions button{
-    background:none;border:none;color:var(--gris-texto);font-size:12px;
-    text-decoration:underline;cursor:pointer;font-family:inherit;
-  }
-  .footer-actions button:hover{color:var(--rojo-egreso);}
-
-  .toast{
-    position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);
-    background:var(--azul-oscuro);color:var(--blanco);padding:12px 20px;border-radius:999px;
-    font-size:13px;font-weight:600;box-shadow:var(--shadow-lg);opacity:0;
-    transition:opacity .25s ease, transform .25s ease;pointer-events:none;z-index:300;
-    max-width:90vw;text-align:center;display:flex;align-items:center;gap:8px;
-  }
-  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-  .toast.success{background:var(--verde-ingreso-dark);}
-  .toast.warning{background:var(--ambar);}
-  .toast.error{background:var(--rojo-egreso-dark);}
-
-  .modal-overlay{
-    position:fixed;inset:0;background:rgba(14,42,71,0.55);
-    display:flex;align-items:center;justify-content:center;
-    padding:20px;z-index:200;opacity:0;pointer-events:none;transition:opacity .18s ease;
-  }
-  .modal-overlay.show{opacity:1;pointer-events:auto;}
-  .modal-box{
-    background:var(--blanco);border-radius:var(--radius-lg);padding:22px 20px;
-    width:100%;max-width:360px;box-shadow:var(--shadow-lg);
-    transform:translateY(10px);transition:transform .18s ease;
-  }
-  .modal-box.wide{max-width:400px;max-height:92vh;overflow-y:auto;}
-  .modal-overlay.show .modal-box{transform:translateY(0);}
-  .modal-box h3{margin:0 0 2px;font-size:16px;color:var(--azul-oscuro);}
-  .modal-box .modal-sub{font-size:12px;color:var(--gris-texto);margin-bottom:16px;}
-  .modal-box label{font-size:12px;font-weight:600;color:var(--gris-texto);display:block;margin-bottom:6px;}
-  .modal-fields{display:grid;grid-template-columns:1.2fr 1fr;gap:10px;margin-bottom:6px;}
-  .modal-fields.single{grid-template-columns:1fr;gap:12px;margin-bottom:10px;}
-  .modal-box input[type="time"],.modal-box input[type="date"],
-  .modal-box input[type="number"],.modal-box input[type="datetime-local"],.modal-box input[type="text"]{
-    width:100%;padding:11px;font-size:16px;font-family:'JetBrains Mono',monospace;
-    border:1.5px solid var(--gris-borde);border-radius:10px;color:var(--azul-oscuro);
-    background:var(--gris-claro);
-  }
-  .modal-box input[type="text"]{font-family:'Inter',sans-serif;font-size:14px;}
-  .field-hint{font-size:11px;color:var(--gris-texto);margin:5px 0 12px;}
-  .modal-error{color:var(--rojo-egreso-dark);font-size:12px;font-weight:600;min-height:16px;margin:8px 0 4px;}
-  .modal-actions{display:flex;gap:10px;margin-top:6px;}
-  .modal-actions.stack{flex-wrap:wrap;}
-  .modal-actions button{
-    flex:1;padding:12px;border-radius:10px;border:none;font-family:inherit;
-    font-weight:700;font-size:13px;cursor:pointer;
-  }
-  .modal-btn-cancel{background:var(--gris-claro);color:var(--gris-texto);}
-  .modal-btn-cancel:hover{background:var(--gris-borde);}
-  .modal-btn-secondary{background:#E3EDF7;color:var(--azul-medio);}
-  .modal-btn-secondary:hover{background:#D3E3F2;}
-  .modal-btn-guardar{background:var(--azul-oscuro);color:var(--blanco);}
-  .modal-btn-guardar:hover{background:var(--azul-medio);}
-  .modal-btn-pagar{background:var(--verde-ingreso);color:var(--blanco);}
-  .modal-btn-pagar:hover{background:var(--verde-ingreso-dark);}
-  .modal-actions button:disabled{opacity:0.6;cursor:not-allowed;}
-
-  .pay-preview{
-    background:var(--gris-claro);border:1px solid var(--gris-borde);border-radius:12px;
-    padding:12px 14px;margin:6px 0 4px;font-size:12.5px;
-  }
-  .pp-line{display:flex;justify-content:space-between;padding:3px 0;color:var(--gris-texto);}
-  .pp-line b{color:var(--azul-oscuro);font-family:'JetBrains Mono',monospace;}
-  .pp-total{
-    display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:10px;
-    border-top:1.5px solid var(--gris-borde);font-weight:700;color:var(--azul-oscuro);
-  }
-  .pp-total b{font-family:'JetBrains Mono',monospace;font-size:20px;color:var(--verde-ingreso-dark);}
-  .pp-warn{margin-top:8px;font-size:11.5px;color:var(--ambar);font-weight:600;}
-
-  .tipo-toggle{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
-  .tipo-btn{
-    padding:11px 8px;border-radius:10px;border:1.5px solid var(--gris-borde);
-    background:var(--gris-claro);color:var(--gris-texto);font-family:inherit;
-    font-weight:700;font-size:13px;cursor:pointer;transition:all .15s ease;
-  }
-  .tipo-btn[data-tipo="Ingreso"].active{background:var(--verde-ingreso);border-color:var(--verde-ingreso);color:var(--blanco);}
-  .tipo-btn[data-tipo="Egreso"].active{background:var(--rojo-egreso);border-color:var(--rojo-egreso);color:var(--blanco);}
-
-  @media (max-width:360px){
-    .clock{font-size:28px;}
-    .modal-fields{grid-template-columns:1fr;}
-    .report-actions{flex-direction:column;}
-  }
-</style>
+    .hidden { display: none !important; }
+    .empty-msg { text-align: center; color: var(--muted); font-size: 0.85rem; padding: 18px 8px; }
+  </style>
 </head>
 <body>
 
-<div class="app">
-  <header class="top">
-    <div class="conn-badge" id="connBadge">
-      <span class="conn-dot"></span>
-      <span id="connText">En línea</span>
-    </div>
-    <div class="eyebrow">Control de asistencia</div>
-    <h1>Ingreso y Egreso</h1>
-    <div class="clock" id="clock">00:00:00</div>
-    <div class="clock-date" id="clockDate">-</div>
-    <div class="status-row">
-      <span class="status-dot" id="statusDot"></span>
-      <span id="statusText">Sin marcas registradas</span>
-    </div>
-  </header>
-
-  <div class="estado-box cargando" id="estadoBox">
-    <div class="estado-linea">
-      <span class="estado-emoji" id="estadoEmoji">⏳</span>
-      <span id="estadoTexto">Verificando estado con el servidor...</span>
-    </div>
-    <div class="estado-verificacion" id="estadoVerificacion">Consultando...</div>
-  </div>
-
-  <div class="punch-grid">
-    <button class="punch-btn ingreso" id="btnIngreso" disabled>
-      <span class="icon">&#8594;</span>
-      <span class="label">INGRESO</span>
-      <span class="sub" id="subIngreso">Verificando...</span>
-    </button>
-    <button class="punch-btn egreso" id="btnEgreso" disabled>
-      <span class="icon">&#8592;</span>
-      <span class="label">EGRESO</span>
-      <span class="sub" id="subEgreso">Verificando...</span>
-    </button>
-  </div>
-
-  <div class="manual-add-wrap">
-    <button class="manual-add-btn" id="btnAbrirAgregarManual">✏️ ¿Te olvidaste de marcar? Agregar registro manual</button>
-  </div>
-
-  <!-- CONTROL DE PAGOS -->
-  <div class="card">
-    <div class="card-header">
-      <h2>Control de pagos</h2>
-      <button class="refresh-btn" id="btnRefreshPagos"><span class="refresh-icon">&#8635;</span>Actualizar</button>
-    </div>
-    <div class="card-sub" id="pagosUltimoPago">Cargando pagos...</div>
-
-    <div class="pay-pending">
-      <div class="pay-pending-label">Horas desde el último pago</div>
-      <div class="pay-big" id="pagosHorasPendientes">0:00 h</div>
-      <div class="pay-pending-sub" id="pagosPendientesSub">-</div>
-    </div>
-
-    <button class="pay-main-btn" id="btnAbrirPago">💰 Calcular y registrar pago</button>
-
-    <details class="pay-history">
-      <summary>Historial de pagos (<span id="pagosCount">0</span>)</summary>
-      <div class="pay-list" id="pagosLista"></div>
-    </details>
-  </div>
-
-  <!-- REPORTE DE PAGOS Y HORAS -->
-  <div class="card">
-    <h2>Reporte de pagos y horas</h2>
-    <div class="card-sub">Elegí el período e imprimilo (o guardalo como PDF)</div>
-
-    <div class="report-range-group" id="rpRangeGroup">
-      <button class="range-chip" data-range="semana_actual">Semana actual</button>
-      <button class="range-chip" data-range="semana_anterior">Semana anterior</button>
-      <button class="range-chip" data-range="mes_actual">Mes actual</button>
-      <button class="range-chip" data-range="mes_anterior">Mes anterior</button>
-      <button class="range-chip" data-range="personalizado">Rango personalizado</button>
-    </div>
-
-    <div class="report-custom-dates" id="rpCustomDates" style="display:none;">
-      <div>
-        <label for="rpDesde">Desde</label>
-        <input type="date" id="rpDesde">
+  <!-- PANTALLA DE LOGIN -->
+  <div id="authScreen" class="auth-wrapper">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <h1>Floreria San Jorge</h1>
+        <p>Control de Asistencia y Horas</p>
       </div>
-      <div>
-        <label for="rpHasta">Hasta</label>
-        <input type="date" id="rpHasta">
-      </div>
-    </div>
-
-    <div class="report-preview" id="rpPreview">Calculando período...</div>
-
-    <div class="report-actions">
-      <button class="report-btn print" id="btnRpPrint">🖨️ Imprimir</button>
-      <button class="report-btn pdf" id="btnRpPDF">🧾 Descargar PDF</button>
+      <form id="loginForm">
+        <div class="field">
+          <label for="loginEmail">Correo electrónico</label>
+          <input type="email" id="loginEmail" required autocomplete="email" placeholder="usuario@floreriasanjorge.com" />
+        </div>
+        <div class="field">
+          <label for="loginPassword">Contraseña</label>
+          <input type="password" id="loginPassword" required autocomplete="current-password" placeholder="••••••••" />
+        </div>
+        <div id="loginError" class="banner-warn hidden"></div>
+        <button type="submit" id="btnLoginSubmit" class="btn-primary" style="margin-top:6px;">Ingresar</button>
+      </form>
     </div>
   </div>
 
-  <!-- REPORTE DE HORAS (CSV / PDF) -->
-  <div class="card">
-    <h2>Generar reporte de horas</h2>
-    <div class="card-sub">Solo horas trabajadas: descargalo en CSV o PDF</div>
-
-    <div class="report-range-group" id="reportRangeGroup">
-      <button class="range-chip" data-range="semana_actual">Semana actual</button>
-      <button class="range-chip" data-range="semana_anterior">Semana anterior</button>
-      <button class="range-chip" data-range="mes_actual">Mes actual</button>
-      <button class="range-chip" data-range="mes_anterior">Mes anterior</button>
-      <button class="range-chip" data-range="personalizado">Rango personalizado</button>
+  <!-- APLICACIÓN PRINCIPAL -->
+  <div id="appScreen" class="container hidden">
+    <!-- Cabecera de sesión -->
+    <div class="topbar">
+      <div>
+        <div class="topbar-biz">Floreria San Jorge</div>
+        <div class="topbar-user">
+          <span id="currentUserName">Cargando...</span>
+          <span id="currentUserRole" class="role-badge">...</span>
+        </div>
+      </div>
+      <button id="btnLogout" class="btn-secondary btn-sm">Salir</button>
     </div>
 
-    <div class="report-custom-dates" id="reportCustomDates" style="display:none;">
-      <div>
-        <label for="reportDesde">Desde</label>
-        <input type="date" id="reportDesde">
-      </div>
-      <div>
-        <label for="reportHasta">Hasta</label>
-        <input type="date" id="reportHasta">
-      </div>
+    <!-- Selector de empleado (solo visible para Admin) -->
+    <div id="adminEmpBar" class="emp-bar hidden">
+      <label for="selectEmpleado">Empleado:</label>
+      <select id="selectEmpleado"></select>
     </div>
 
-    <div class="report-preview" id="reportPreview">Calculando rango...</div>
+    <div id="offlineBanner" class="banner-warn hidden">
+      Sin conexión a internet. Algunas acciones están pausadas hasta recuperar señal.
+    </div>
 
-    <div class="report-actions">
-      <button class="report-btn csv" id="btnReportCSV">📄 Descargar CSV</button>
-      <button class="report-btn pdf" id="btnReportPDF">🧾 Descargar PDF</button>
+    <!-- Navegación -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="fichar">Fichar</button>
+      <button class="tab-btn" data-tab="historial">Historial</button>
+      <button class="tab-btn" data-tab="pagos">Pagos y Reportes</button>
+    </div>
+
+    <!-- TAB 1: FICHAR -->
+    <section id="tab-fichar">
+      <div class="card">
+        <div class="card-title">
+          <span id="ficharTitleLabel">Registro de Jornada</span>
+          <span id="syncIndicator" style="font-size:0.72rem;color:var(--muted);">Conectado</span>
+        </div>
+        <div class="clock-box">
+          <div id="clockTime" class="clock-time">--:--:--</div>
+          <div id="clockDate" class="clock-date">---</div>
+          <div class="status-pill">
+            <span id="statusDot" class="dot"></span>
+            <span id="statusText">Verificando estado...</span>
+          </div>
+          <div id="statusSub" class="status-sub"></div>
+        </div>
+
+        <div class="btn-grid">
+          <button id="btnIngreso" class="btn-in" disabled>INGRESO</button>
+          <button id="btnEgreso" class="btn-out" disabled>EGRESO</button>
+        </div>
+
+        <div id="adminManualBtnWrap" style="margin-top:12px;" class="hidden">
+          <button id="btnAbrirManual" class="btn-secondary" style="width:100%;">+ Agregar marca manual</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>Resumen de esta semana</span></div>
+        <div class="summary-strip">
+          <div class="stat-box">
+            <div id="statHorasHoy" class="stat-val">0h 00m</div>
+            <div class="stat-lbl">Hoy</div>
+          </div>
+          <div class="stat-box">
+            <div id="statHorasSemana" class="stat-val">0h 00m</div>
+            <div class="stat-lbl">Semana</div>
+          </div>
+          <div class="stat-box">
+            <div id="statDiasSemana" class="stat-val">0</div>
+            <div class="stat-lbl">Días trabajados</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: HISTORIAL -->
+    <section id="tab-historial" class="hidden">
+      <div class="card">
+        <div class="card-title">
+          <span>Historial de Marcas</span>
+          <button id="btnRefreshHist" class="btn-secondary btn-sm">Actualizar</button>
+        </div>
+        <div class="chips" id="histFilterChips">
+          <button class="chip active" data-range="semana">Esta semana</button>
+          <button class="chip" data-range="mes">Este mes</button>
+          <button class="chip" data-range="todo">Todo</button>
+        </div>
+        <div id="historialLista"></div>
+      </div>
+    </section>
+
+    <!-- TAB 3: PAGOS Y REPORTES -->
+    <section id="tab-pagos" class="hidden">
+      <div class="card">
+        <div class="card-title">
+          <span>Control de Pagos</span>
+          <button id="btnNuevoPago" class="btn-primary btn-sm hidden" style="width:auto;">+ Registrar Pago</button>
+        </div>
+        <div class="summary-strip">
+          <div class="stat-box">
+            <div id="statHorasSinPagar" class="stat-val" style="color:var(--amber);">0.00 h</div>
+            <div class="stat-lbl">Horas pendientes</div>
+          </div>
+          <div class="stat-box">
+            <div id="statTotalPagado" class="stat-val" style="color:var(--green);">$0</div>
+            <div class="stat-lbl">Total abonado</div>
+          </div>
+          <div class="stat-box">
+            <div id="statCantPagos" class="stat-val">0</div>
+            <div class="stat-lbl">Liquidaciones</div>
+          </div>
+        </div>
+        <div id="pagosLista"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>Exportar Reporte de Horas</span></div>
+        <div class="chips" id="reportRangeGroup">
+          <button class="chip active" data-val="semana">Esta semana</button>
+          <button class="chip" data-val="quincena">Últimos 15 días</button>
+          <button class="chip" data-val="mes">Este mes</button>
+          <button class="chip" data-val="custom">Personalizado</button>
+        </div>
+        <div id="reportCustomDates" class="row-2 hidden">
+          <div class="field"><label>Desde</label><input type="date" id="reportDesde" /></div>
+          <div class="field"><label>Hasta</label><input type="date" id="reportHasta" /></div>
+        </div>
+        <div id="reportPreviewText" style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;"></div>
+        <div class="btn-grid" style="margin-top:0;">
+          <button id="btnReportCSV" class="btn-secondary">Descargar CSV</button>
+          <button id="btnReportPDF" class="btn-primary">Descargar PDF</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- MODAL MARCA MANUAL / EDICIÓN (ADMIN) -->
+  <div id="manualModalOverlay" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="manualModalTitle">Marca Manual</h3>
+        <button id="btnCerrarManual" class="btn-secondary btn-sm">✕</button>
+      </div>
+      <form id="manualForm">
+        <input type="hidden" id="manualId" />
+        <div class="field">
+          <label>Tipo de marca</label>
+          <select id="manualTipo" required>
+            <option value="INGRESO">INGRESO</option>
+            <option value="EGRESO">EGRESO</option>
+          </select>
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label>Fecha</label>
+            <input type="date" id="manualFecha" required />
+          </div>
+          <div class="field">
+            <label>Hora</label>
+            <input type="time" id="manualHora" required />
+          </div>
+        </div>
+        <button type="submit" id="btnGuardarManual" class="btn-primary">Guardar Marca</button>
+      </form>
     </div>
   </div>
 
-  <div class="card">
-    <div class="card-header">
-      <h2>Historial por semana</h2>
-      <button class="refresh-btn" id="btnRefreshHist"><span class="refresh-icon">&#8635;</span>Actualizar</button>
-    </div>
-    <div class="card-sub">Tocá el ✏️ junto a una hora para corregir fecha y hora</div>
-    <div class="fuente-nube" id="fuenteNube">Cargando historial de la nube...</div>
-    <div id="conflictBanner"></div>
-    <div id="weeksContainer">
-      <div class="skeleton">Cargando semanas...</div>
+  <!-- MODAL REGISTRAR PAGO (ADMIN) -->
+  <div id="payModalOverlay" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-head">
+        <h3>Registrar Liquidación</h3>
+        <button id="btnCerrarPay" class="btn-secondary btn-sm">✕</button>
+      </div>
+      <form id="payForm">
+        <div class="row-2">
+          <div class="field">
+            <label>Desde (opcional)</label>
+            <input type="date" id="payDesde" />
+          </div>
+          <div class="field">
+            <label>Hasta (inclusive)</label>
+            <input type="date" id="payHasta" required />
+          </div>
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label>Horas a liquidar</label>
+            <input type="number" step="0.01" id="payHoras" required />
+          </div>
+          <div class="field">
+            <label>Valor por hora ($)</label>
+            <input type="number" step="0.01" id="payTarifa" required />
+          </div>
+        </div>
+        <div class="field">
+          <label>Monto total ($)</label>
+          <input type="number" step="0.01" id="payMonto" required />
+        </div>
+        <div class="field">
+          <label>Notas / Observaciones</label>
+          <input type="text" id="payNotas" placeholder="Ej: Transferencia bancaria" />
+        </div>
+        <button type="submit" id="btnGuardarPay" class="btn-primary">Confirmar Pago</button>
+      </form>
     </div>
   </div>
 
-  <div class="footer-actions">
-    <button class="sync-btn" id="btnForceSync">Reintentar sincronización pendiente</button>
-    <button id="btnReset">Borrar marcas locales pendientes de este dispositivo</button>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<!-- Modal: editar un registro existente -->
-<div class="modal-overlay" id="editModalOverlay">
-  <div class="modal-box">
-    <h3 id="editModalTitle">Editar registro</h3>
-    <div class="modal-sub" id="editModalSub" style="text-transform:capitalize;">-</div>
-    <div class="modal-fields">
-      <div>
-        <label for="editModalDateInput">Fecha</label>
-        <input type="date" id="editModalDateInput">
-      </div>
-      <div>
-        <label for="editModalTimeInput">Hora</label>
-        <input type="time" id="editModalTimeInput" step="60">
-      </div>
-    </div>
-    <div class="modal-error" id="editModalError"></div>
-    <div class="modal-actions">
-      <button class="modal-btn-cancel" id="editModalCancel">Cancelar</button>
-      <button class="modal-btn-guardar" id="editModalGuardar">Guardar</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal: agregar registro manual -->
-<div class="modal-overlay" id="addModalOverlay">
-  <div class="modal-box">
-    <h3>Agregar registro manual</h3>
-    <div class="modal-sub">Para cuando te olvidaste de marcar un Ingreso o Egreso</div>
-
-    <label>Tipo de marca</label>
-    <div class="tipo-toggle">
-      <button type="button" class="tipo-btn active" data-tipo="Ingreso" id="addTipoIngreso">Ingreso</button>
-      <button type="button" class="tipo-btn" data-tipo="Egreso" id="addTipoEgreso">Egreso</button>
-    </div>
-
-    <div class="modal-fields">
-      <div>
-        <label for="addModalDateInput">Fecha</label>
-        <input type="date" id="addModalDateInput">
-      </div>
-      <div>
-        <label for="addModalTimeInput">Hora</label>
-        <input type="time" id="addModalTimeInput" step="60">
-      </div>
-    </div>
-    <div class="modal-error" id="addModalError"></div>
-    <div class="modal-actions">
-      <button class="modal-btn-cancel" id="addModalCancel">Cancelar</button>
-      <button class="modal-btn-guardar" id="addModalGuardar">Agregar</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal: calcular y registrar pago -->
-<div class="modal-overlay" id="payModalOverlay">
-  <div class="modal-box wide">
-    <h3>Calcular y registrar pago</h3>
-    <div class="modal-sub">Se calcula desde el último pago registrado</div>
-
-    <label for="payTarifa">Valor por hora ($)</label>
-    <input type="number" id="payTarifa" min="0" step="0.01" inputmode="decimal" placeholder="Ej: 2500">
-    <div class="field-hint" id="payTarifaHint"></div>
-
-    <div class="modal-fields single">
-      <div>
-        <label for="payDesde">Desde (se cuentan los turnos que terminaron después de)</label>
-        <input type="datetime-local" id="payDesde">
-      </div>
-      <div>
-        <label for="payHasta">Hasta (se cuentan los turnos terminados hasta)</label>
-        <input type="datetime-local" id="payHasta">
-      </div>
-      <div>
-        <label for="payNotas">Notas (opcional)</label>
-        <input type="text" id="payNotas" maxlength="120" placeholder="Ej: pago quincena, efectivo">
-      </div>
-    </div>
-
-    <div class="pay-preview" id="payPreview"></div>
-    <div class="modal-error" id="payError"></div>
-
-    <div class="modal-actions stack">
-      <button class="modal-btn-cancel" id="payCancel" style="flex-basis:100%;">Cancelar</button>
-      <button class="modal-btn-secondary" id="payPrint">🖨️ Imprimir</button>
-      <button class="modal-btn-secondary" id="payPDF">🧾 Descargar PDF</button>
-      <button class="modal-btn-pagar" id="payRegistrar" style="flex-basis:100%;">Registrar pago</button>
-    </div>
-  </div>
-</div>
+  <div id="toast" class="toast"></div>
 
 <script>
 (function(){
-  "use strict";
-
-  const STORAGE_KEY = "control_ingreso_egreso_marcas_v3";
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbw4HUiRF1xPm7eQ985tDKSZaWheDhUubewsSRd_zXgfQMS7bHedPBo3n1RV651tDRxDLw/exec";
-  const POLL_ESTADO_MS = 20000;
-  const POLL_HISTORIAL_MS = 60000;
-
-  const DIAS = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
-
-  function loadMarcas(){
-    try{
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
-    }catch(e){ console.error("Error leyendo localStorage", e); return []; }
-  }
-  function saveMarcas(marcas){ localStorage.setItem(STORAGE_KEY, JSON.stringify(marcas)); }
-
-  let marcas = loadMarcas();
-
-  let ultimoEstadoServidor = null;
-  let servidorVerificado = false;
-  let ultimaVerificacionTs = null;
-  let botonesCargando = false;
-
-  let historialServidor = [];
-  let historialCargado = false;
-  let historialError = false;
-  let actualizandoHistorial = false;
-
-  let pagosServidor = [];
-  let pagosCargados = false;
-  let pagosError = false;
-  let actualizandoPagos = false;
-  let payGuardando = false;
-
-  let modalEditId = null;
-  let modalEditOrigen = null;
-  let modalEditTipo = null;
-  let modalEditContraparteRaw = null;
-  let modalGuardando = false;
-
-  let addTipoSeleccionado = "Ingreso";
-  let addModalGuardando = false;
-
-  let rangoReporteSeleccionado = "semana_actual";
-  let rangoPagosSeleccionado = "semana_actual";
-
-  // ---------- Helpers ----------
-  function esc(s){
-    return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-  }
-  function fmtMoney(n){
-    return "$ " + Number(n || 0).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
-  function roundToNearest15(date){
-    const d = new Date(date.getTime());
-    const minutes = d.getMinutes();
-    const remainder = minutes % 15;
-    let roundedMinutes = (remainder < 7.5) ? (minutes - remainder) : (minutes + (15 - remainder));
-    d.setMinutes(roundedMinutes); d.setSeconds(0); d.setMilliseconds(0);
-    return d;
-  }
-  function fmtTime(date){
-    if(!date) return "--:--";
-    const d = new Date(date);
-    return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
-  }
-  function fmtTimeSec(date){
-    const d = new Date(date);
-    return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")}`;
-  }
-  function fmtDateShort(date){
-    const d = new Date(date);
-    return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`;
-  }
-  function fmtDateLarga(date){
-    const d = new Date(date);
-    return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
-  }
-  function fmtDateTimeLarga(date){
-    return `${fmtDateLarga(date)} ${fmtTime(date)}`;
-  }
-  function dateOnlyISO(date){
-    const d = new Date(date); d.setHours(0,0,0,0);
-    return d.toISOString().slice(0,10);
-  }
-  function toLocalInputValue(d){
-    const p = n => String(n).padStart(2,"0");
-    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
-  }
-  function hoursDecimal(entradaMs, salidaMs){
-    if(!entradaMs || !salidaMs) return 0;
-    const diff = salidaMs - entradaMs;
-    return diff > 0 ? diff / (1000*60*60) : 0;
-  }
-  function fmtHoursMin(decimalHours){
-    const totalMinutes = Math.round(decimalHours * 60);
-    const h = Math.floor(totalMinutes / 60);
-    const m = totalMinutes % 60;
-    return `${h}:${String(m).padStart(2,"0")}`;
-  }
-  function getWeekRange(date){
-    const d = new Date(date); d.setHours(0,0,0,0);
-    const day = d.getDay();
-    const diffToMonday = (day === 0) ? -6 : 1 - day;
-    const monday = new Date(d); monday.setDate(d.getDate() + diffToMonday);
-    const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6); sunday.setHours(23,59,59,999);
-    return { start: monday, end: sunday };
-  }
-
-  function getMarcasLocalesOrdenadas(){
-    return [...marcas].sort((a,b) => new Date(a.raw) - new Date(b.raw));
-  }
-  function getUltimaMarcaLocal(){
-    const o = getMarcasLocalesOrdenadas();
-    return o.length ? o[o.length - 1] : null;
-  }
-
-  function getMarcasCombinadas(){
-    const idsServidor = new Set(historialServidor.map(m => m.id));
-    const serverNorm = historialServidor.map(m => ({
-      id: m.id, tipo: m.tipo, raw: m.timestamp,
-      rounded: m.timestampRedondeado || `${m.fecha}T${m.horaRedondeada}:00`,
-      synced: true, origen: "servidor"
-    }));
-    const localPendientes = marcas
-      .filter(m => m.synced === false && !idsServidor.has(m.id))
-      .map(m => ({ ...m, origen: "local" }));
-    return [...serverNorm, ...localPendientes].sort((a,b) => new Date(a.raw) - new Date(b.raw));
-  }
-
-  function getUltimaMarcaEfectiva(){
-    const combinadas = getMarcasCombinadas();
-    return combinadas.length ? combinadas[combinadas.length - 1] : null;
-  }
-
-  function getEstadoActual(){
-    const candidatos = [];
-    if(ultimoEstadoServidor && ultimoEstadoServidor.tipo){
-      candidatos.push({ tipo: ultimoEstadoServidor.tipo, ts: new Date(ultimoEstadoServidor.timestamp || 0).getTime() });
-    }
-    const localUltima = getUltimaMarcaLocal();
-    if(localUltima && localUltima.synced === false){
-      candidatos.push({ tipo: localUltima.tipo, ts: new Date(localUltima.raw).getTime() });
-    }
-    if(candidatos.length === 0) return "fuera";
-    candidatos.sort((a,b) => b.ts - a.ts);
-    return candidatos[0].tipo === "Egreso" ? "fuera" : "trabajando";
-  }
-
-  function buildSesiones(marcasOrdenadas){
-    const sesiones = [];
-    let abierta = null;
-    marcasOrdenadas.forEach(m => {
-      if(m.tipo === "Ingreso"){
-        if(abierta) sesiones.push(abierta);
-        abierta = {
-          entradaId: m.id, entradaRaw: m.raw, entradaRounded: m.rounded, entradaSynced: m.synced,
-          salidaId: null, salidaRaw: null, salidaRounded: null, salidaSynced: null
-        };
-      } else {
-        if(abierta){
-          abierta.salidaId = m.id;
-          abierta.salidaRaw = m.raw; abierta.salidaRounded = m.rounded; abierta.salidaSynced = m.synced;
-          sesiones.push(abierta); abierta = null;
-        } else {
-          sesiones.push({
-            entradaId: null, entradaRaw: null, entradaRounded: null, entradaSynced: null,
-            salidaId: m.id, salidaRaw: m.raw, salidaRounded: m.rounded, salidaSynced: m.synced
-          });
-        }
-      }
-    });
-    if(abierta) sesiones.push(abierta);
-    return sesiones;
-  }
-
-  function buildGruposSemanales(sesiones){
-    const grupos = {};
-    sesiones.forEach(s => {
-      const ref = s.entradaRaw || s.salidaRaw;
-      if(!ref) return;
-      const { start, end } = getWeekRange(new Date(ref));
-      const key = dateOnlyISO(start);
-      if(!grupos[key]) grupos[key] = { start, end, sesiones: [], totalHoras: 0 };
-      grupos[key].sesiones.push(s);
-      if(s.entradaRounded && s.salidaRounded){
-        grupos[key].totalHoras += hoursDecimal(new Date(s.entradaRounded).getTime(), new Date(s.salidaRounded).getTime());
-      }
-    });
-    return Object.values(grupos).sort((a,b) => b.start - a.start);
-  }
-
+  const NEGOCIO_NOMBRE = "Floreria San Jorge";
   const SUPABASE_URL = "https://wcekgkgoxwdyyxkxbqcb.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_Z28ePmd1g6V9BCEoWV2HsA_4AciiqDS";
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  // ---------- Comunicación con Supabase ----------
-  async function enviarMarcaAlServidor(marca){
-    const { data, error } = await sb.rpc("registrar_marca_segura", {
-      p_id: marca.id,
-      p_tipo: marca.tipo,
-      p_timestamp_real: marca.raw,
-      p_timestamp_redondeado: marca.rounded
-    });
-    if(error) throw error;
-    return data;
+  // Estado de sesión y multi-empleado
+  let currentUser = null;
+  let currentPerfil = null; // { id, nombre, email, rol, valor_hora_default }
+  let listaEmpleados = [];  // lista de perfiles (para admin)
+  let selectedEmpleadoId = null;
+
+  // Estado de datos del empleado seleccionado
+  let estadoServidor = { cargado: false, error: false, tipo: null, timestamp: null };
+  let historialServidor = [];
+  let pagosServidor = [];
+  let registrando = false;
+  let histFiltro = "semana";
+  let rangoReporteSeleccionado = "semana";
+
+  // Utilidades de fecha y formato
+  function pad2(n){ return String(n).padStart(2, "0"); }
+  function toLocalDateStr(d){
+    const dt = d instanceof Date ? d : new Date(d);
+    return `${dt.getFullYear()}-${pad2(dt.getMonth()+1)}-${pad2(dt.getDate())}`;
+  }
+  function toLocalTimeStr(d){
+    const dt = d instanceof Date ? d : new Date(d);
+    return `${pad2(dt.getHours())}:${pad2(dt.getMinutes())}`;
+  }
+  function formatFechaAR(isoOrDate){
+    const d = isoOrDate instanceof Date ? isoOrDate : new Date(isoOrDate);
+    if(isNaN(d)) return "-";
+    return d.toLocaleDateString("es-AR", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" });
+  }
+  function formatHoraAR(isoOrDate){
+    const d = isoOrDate instanceof Date ? isoOrDate : new Date(isoOrDate);
+    if(isNaN(d)) return "--:--";
+    return d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false });
+  }
+  function formatDuracion(ms){
+    const mins = Math.max(0, Math.round(ms / 60000));
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${h}h ${pad2(m)}m`;
+  }
+  function formatMoney(n){
+    return "$" + Number(n || 0).toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  }
+  function redondear15Min(date){
+    const d = new Date(date);
+    const ms = 15 * 60 * 1000;
+    return new Date(Math.round(d.getTime() / ms) * ms);
+  }
+  function startOfWeekMonday(d){
+    const dt = new Date(d);
+    const day = dt.getDay();
+    const diff = (day === 0 ? -6 : 1) - day;
+    dt.setDate(dt.getDate() + diff);
+    dt.setHours(0,0,0,0);
+    return dt;
   }
 
-  async function editarMarcaEnServidor(id, nuevaFecha, horaEditada){
-    const nuevoRaw = new Date(`${nuevaFecha}T${horaEditada}:00`);
-    const nuevoRounded = roundToNearest15(nuevoRaw);
-
-    const { data, error } = await sb
-      .from("marcas")
-      .update({
-        timestamp_real: nuevoRaw.toISOString(),
-        timestamp_redondeado: nuevoRounded.toISOString()
-      })
-      .eq("id", id)
-      .select("id");
-
-    if(error) throw error;
-    if(!data || data.length === 0) return { status: "error", motivo: "no_encontrado" };
-    return { status: "ok" };
+  let toastTimer = null;
+  function showToast(msg, type = ""){
+    const el = document.getElementById("toast");
+    el.textContent = msg;
+    el.className = "toast show " + type;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.className = "toast"; }, 3200);
   }
 
-  async function agregarMarcaManualEnServidor(fecha, hora, tipo, id, forzar){
-    const raw = new Date(`${fecha}T${hora}:00`);
-    const rounded = roundToNearest15(raw);
-
-    if(!forzar){
-      const { data: cercanas, error: errBusca } = await sb
-        .from("marcas")
-        .select("id, tipo, timestamp_real, timestamp_redondeado")
-        .order("timestamp_real", { ascending: true });
-
-      if(errBusca) throw errBusca;
-
-      if(cercanas && cercanas.length > 0){
-        const targetMs = raw.getTime();
-        let masCercana = cercanas[0];
-        let minDiff = Math.abs(new Date(masCercana.timestamp_real).getTime() - targetMs);
-
-        for(const m of cercanas){
-          const diff = Math.abs(new Date(m.timestamp_real).getTime() - targetMs);
-          if(diff < minDiff){ minDiff = diff; masCercana = m; }
-        }
-
-        if(masCercana.tipo === tipo){
-          return {
-            status: "warning",
-            contexto: {
-              tipo: masCercana.tipo,
-              timestamp: masCercana.timestamp_real,
-              horaRedondeada: fmtTime(masCercana.timestamp_redondeado)
-            }
-          };
-        }
-      }
-    }
-
-    const { error } = await sb.from("marcas").insert({
-      id,
-      tipo,
-      timestamp_real: raw.toISOString(),
-      timestamp_redondeado: rounded.toISOString()
-    });
-    if(error) throw error;
-    return { status: "ok" };
+  function esAdmin(){ return currentPerfil && currentPerfil.rol === "admin"; }
+  function getEmpleadoActivo(){
+    return listaEmpleados.find(e => e.id === selectedEmpleadoId) || currentPerfil;
   }
 
-  async function registrarPagoEnServidor(pago){
-    const { error } = await sb.from("pagos").insert({
-      id: pago.id,
-      fecha_pago: pago.fechaPago,
-      desde: pago.desde || null,
-      hasta: pago.hasta,
-      horas: pago.horas,
-      tarifa: pago.tarifa,
-      monto: pago.monto,
-      notas: pago.notas || ""
-    });
-    if(error) return { status: "error", motivo: error.message };
-    return { status: "ok" };
-  }
-
-  async function eliminarPagoEnServidor(id){
-    const { error } = await sb.from("pagos").delete().eq("id", id);
-    if(error) throw error;
-    return { status: "ok" };
-  }
-
-  async function consultarEstadoServidor(){
-    const { data, error } = await sb
-      .from("marcas")
-      .select("tipo, timestamp_real, timestamp_redondeado")
-      .order("timestamp_real", { ascending: false })
-      .limit(1);
-
-    if(error) throw error;
-    if(!data || data.length === 0) return null;
-
-    const u = data[0];
-    return {
-      tipo: u.tipo,
-      timestamp: u.timestamp_real,
-      fecha: dateOnlyISO(u.timestamp_real),
-      horaOriginal: fmtTimeSec(u.timestamp_real),
-      horaRedondeada: fmtTime(u.timestamp_redondeado)
-    };
-  }
-
-  async function consultarHistorialServidor(){
-    const { data, error } = await sb
-      .from("marcas")
-      .select("id, tipo, timestamp_real, timestamp_redondeado")
-      .order("timestamp_real", { ascending: true });
-
-    if(error) throw error;
-    return (data || []).map(m => ({
-      id: m.id,
-      tipo: m.tipo,
-      timestamp: m.timestamp_real,
-      fecha: dateOnlyISO(m.timestamp_real),
-      horaRedondeada: fmtTime(m.timestamp_redondeado),
-      timestampRedondeado: m.timestamp_redondeado
-    }));
-  }
-
-  async function consultarPagosServidor(){
-    const { data, error } = await sb
-      .from("pagos")
-      .select("id, fecha_pago, desde, hasta, horas, tarifa, monto, notas")
-      .order("fecha_pago", { ascending: false });
-
-    if(error) throw error;
-    return (data || []).map(p => ({
-      id: p.id,
-      fechaPago: p.fecha_pago,
-      desde: p.desde || "",
-      hasta: p.hasta,
-      horas: Number(p.horas) || 0,
-      tarifa: Number(p.tarifa) || 0,
-      monto: Number(p.monto) || 0,
-      notas: p.notas || ""
-    }));
-  }
-  async function actualizarEstadoDesdeServidor(silencioso){
-    try{
-      const data = await consultarEstadoServidor();
-      ultimoEstadoServidor = data && data.tipo ? data : null;
-      servidorVerificado = true;
-      ultimaVerificacionTs = new Date();
-      render();
-    }catch(err){
-      console.warn("No se pudo verificar el estado en el servidor:", err);
-      servidorVerificado = false;
-      render();
-      if(!silencioso) showToast("No se pudo verificar el estado con el servidor.", "warning");
-    }
-  }
-
-  async function actualizarHistorialDesdeServidor(silencioso){
-    actualizandoHistorial = true; render();
-    try{
-      const data = await consultarHistorialServidor();
-      historialServidor = Array.isArray(data) ? data : [];
-      historialCargado = true; historialError = false;
-    }catch(err){
-      console.warn("No se pudo cargar el historial desde el servidor:", err);
-      historialError = true;
-      if(!silencioso) showToast("No se pudo cargar el historial desde Supabase.", "warning");
-    }finally{
-      actualizandoHistorial = false; render();
-    }
-  }
-
-  async function actualizarPagosDesdeServidor(silencioso){
-    actualizandoPagos = true; render();
-    try{
-      const data = await consultarPagosServidor();
-      if(!Array.isArray(data)) throw new Error("Respuesta inesperada de pagos");
-      pagosServidor = data.map(p => ({
-        id: String(p.id), fechaPago: p.fechaPago || "", desde: p.desde || "", hasta: p.hasta,
-        horas: Number(p.horas) || 0, tarifa: Number(p.tarifa) || 0, monto: Number(p.monto) || 0,
-        notas: p.notas || ""
-      }));
-      pagosCargados = true; pagosError = false;
-    }catch(err){
-      console.warn("No se pudieron cargar los pagos:", err);
-      pagosError = true;
-      if(!silencioso) showToast("No se pudieron cargar los pagos desde Supabase.", "warning");
-    }finally{
-      actualizandoPagos = false; render();
-    }
-  }
-  
-  async function reintentarPendientes(silencioso){
-    if(!navigator.onLine) return;
-    const pendientes = marcas.filter(m => m.synced === false);
-    if(pendientes.length === 0){
-      if(!silencioso) showToast("No hay registros pendientes de sincronizar.", "success");
+  // ================= AUTENTICACIÓN Y PERFILES =================
+  async function inicializarSesion(session){
+    if(!session || !session.user){
+      currentUser = null;
+      currentPerfil = null;
+      listaEmpleados = [];
+      selectedEmpleadoId = null;
+      document.getElementById("authScreen").classList.remove("hidden");
+      document.getElementById("appScreen").classList.add("hidden");
       return;
     }
-    if(!silencioso) showToast(`Sincronizando ${pendientes.length} registro(s) pendiente(s)...`, "warning");
-    let huboExito = false;
-    for(const m of pendientes){
-      try{
-        const resp = await enviarMarcaAlServidor(m);
-        if(resp && resp.status === "ok"){ m.synced = true; huboExito = true; }
-        else if(resp && resp.status === "rejected"){
-          m.synced = "conflict";
-          ultimoEstadoServidor = resp.ultimoEstado || ultimoEstadoServidor;
-          servidorVerificado = true;
-        }
-      }catch(err){ console.warn("Reintento fallido para marca", m.id, err); }
+
+    currentUser = session.user;
+    const { data: perfil, error } = await sb
+      .from("perfiles")
+      .select("*")
+      .eq("id", currentUser.id)
+      .single();
+
+    if(error || !perfil){
+      showToast("No se encontró el perfil del usuario en la base de datos.", "error");
+      await sb.auth.signOut();
+      return;
     }
-    saveMarcas(marcas);
-    if(huboExito) await actualizarHistorialDesdeServidor(true);
+
+    currentPerfil = perfil;
+    document.getElementById("currentUserName").textContent = perfil.nombre;
+    const roleBadge = document.getElementById("currentUserRole");
+    roleBadge.textContent = perfil.rol === "admin" ? "Admin" : "Empleado";
+    roleBadge.className = "role-badge " + (perfil.rol === "admin" ? "admin" : "");
+
+    if(perfil.rol === "admin"){
+      const { data: emps } = await sb
+        .from("perfiles")
+        .select("*")
+        .eq("activo", true)
+        .order("nombre", { ascending: true });
+      listaEmpleados = emps && emps.length ? emps : [perfil];
+
+      // Por defecto, si hay empleados no-admin, seleccionar el primero; si no, el admin
+      const primerEmp = listaEmpleados.find(e => e.rol === "empleado") || listaEmpleados[0];
+      selectedEmpleadoId = primerEmp.id;
+
+      const sel = document.getElementById("selectEmpleado");
+      sel.innerHTML = listaEmpleados.map(e =>
+        `<option value="${e.id}">${e.nombre} (${e.rol === "admin" ? "Admin" : "Empleado"})</option>`
+      ).join("");
+      sel.value = selectedEmpleadoId;
+
+      document.getElementById("adminEmpBar").classList.remove("hidden");
+      document.getElementById("adminManualBtnWrap").classList.remove("hidden");
+      document.getElementById("btnNuevoPago").classList.remove("hidden");
+    } else {
+      listaEmpleados = [perfil];
+      selectedEmpleadoId = perfil.id;
+      document.getElementById("adminEmpBar").classList.add("hidden");
+      document.getElementById("adminManualBtnWrap").classList.add("hidden");
+      document.getElementById("btnNuevoPago").classList.add("hidden");
+    }
+
+    document.getElementById("authScreen").classList.add("hidden");
+    document.getElementById("appScreen").classList.remove("hidden");
+    await recargarTodoEmpleado();
+  }
+
+  async function recargarTodoEmpleado(){
+    if(!selectedEmpleadoId) return;
+    const emp = getEmpleadoActivo();
+    document.getElementById("ficharTitleLabel").textContent =
+      esAdmin() ? `Jornada de ${emp ? emp.nombre : ""}` : "Mi Jornada";
+    await Promise.all([
+      actualizarEstadoDesdeServidor(true),
+      actualizarHistorialDesdeServidor(true),
+      actualizarPagosDesdeServidor(true)
+    ]);
+  }
+
+  // ================= CONSULTAS SUPABASE =================
+  async function actualizarEstadoDesdeServidor(silencioso){
+    if(!selectedEmpleadoId) return;
+    try{
+      const { data, error } = await sb
+        .from("marcas")
+        .select("tipo, timestamp_real, timestamp_redondeado")
+        .eq("empleado_id", selectedEmpleadoId)
+        .order("timestamp_real", { ascending: false })
+        .limit(1);
+      if(error) throw error;
+      const ultima = data && data[0];
+      estadoServidor = {
+        cargado: true,
+        error: false,
+        tipo: ultima ? ultima.tipo : null,
+        timestamp: ultima ? (ultima.timestamp_redondeado || ultima.timestamp_real) : null
+      };
+    }catch(err){
+      console.warn("Error estado:", err);
+      estadoServidor.error = true;
+      if(!silencioso) showToast("Error al consultar estado.", "warning");
+    }
     render();
   }
 
-  // ---------- Marcado en tiempo real ----------
-  function setBotonesCargando(loading){ botonesCargando = loading; render(); }
-
-  async function marcarIngreso(){
-    if(botonesCargando) return;
-    if(getEstadoActual() !== "fuera"){ showToast("Ya estás marcado como Trabajando.", "warning"); return; }
-    await ejecutarMarca("Ingreso");
+  async function actualizarHistorialDesdeServidor(silencioso){
+    if(!selectedEmpleadoId) return;
+    try{
+      const { data, error } = await sb
+        .from("marcas")
+        .select("id, tipo, timestamp_real, timestamp_redondeado")
+        .eq("empleado_id", selectedEmpleadoId)
+        .order("timestamp_real", { ascending: true });
+      if(error) throw error;
+      historialServidor = (data || []).map(r => ({
+        id: r.id,
+        tipo: r.tipo,
+        timestampReal: r.timestamp_real,
+        timestampRedondeado: r.timestamp_redondeado || r.timestamp_real
+      }));
+    }catch(err){
+      console.warn("Error historial:", err);
+      if(!silencioso) showToast("No se pudo cargar el historial.", "warning");
+    }
+    render();
   }
-  async function marcarEgreso(){
-    if(botonesCargando) return;
-    if(getEstadoActual() !== "trabajando"){ showToast("No hay un Ingreso activo para marcar egreso.", "warning"); return; }
-    await ejecutarMarca("Egreso");
+
+  async function actualizarPagosDesdeServidor(silencioso){
+    if(!selectedEmpleadoId) return;
+    try{
+      const { data, error } = await sb
+        .from("pagos")
+        .select("*")
+        .eq("empleado_id", selectedEmpleadoId)
+        .order("fecha_pago", { ascending: false });
+      if(error) throw error;
+      pagosServidor = (data || []).map(p => ({
+        id: String(p.id),
+        fechaPago: p.fecha_pago || "",
+        desde: p.desde || "",
+        hasta: p.hasta || "",
+        horas: Number(p.horas) || 0,
+        tarifa: Number(p.tarifa) || 0,
+        monto: Number(p.monto) || 0,
+        notas: p.notas || ""
+      }));
+    }catch(err){
+      console.warn("Error pagos:", err);
+      if(!silencioso) showToast("No se pudieron cargar los pagos.", "warning");
+    }
+    render();
   }
 
-  async function ejecutarMarca(tipo){
-    const now = new Date();
-    const rounded = roundToNearest15(now);
-    const marcaTentativa = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
-      tipo, raw: now.toISOString(), rounded: rounded.toISOString(), synced: false
-    };
-
+  // ================= FICHAR INGRESO / EGRESO =================
+  async function registrarMarca(tipo){
+    if(registrando || !selectedEmpleadoId) return;
     if(!navigator.onLine){
-      marcas.push(marcaTentativa); saveMarcas(marcas); render();
-      showToast(`${tipo} guardado localmente. Sin conexión: se validará y sincronizará luego.`, "warning");
+      showToast("Sin conexión a internet.", "error");
       return;
     }
+    registrando = true;
+    render();
 
-    setBotonesCargando(true);
     try{
-      const resp = await enviarMarcaAlServidor(marcaTentativa);
+      const ahora = new Date();
+      const redondeada = redondear15Min(ahora);
+      const id = "m_" + Date.now() + "_" + Math.random().toString(36).slice(2,7);
 
-      if(resp && resp.status === "ok"){
-        marcaTentativa.synced = true;
-        marcas.push(marcaTentativa); saveMarcas(marcas);
-        ultimoEstadoServidor = {
-          tipo, timestamp: marcaTentativa.raw, fecha: dateOnlyISO(marcaTentativa.raw),
-          horaOriginal: fmtTimeSec(marcaTentativa.raw), horaRedondeada: fmtTime(marcaTentativa.rounded)
-        };
-        servidorVerificado = true; ultimaVerificacionTs = new Date();
-        setBotonesCargando(false);
-        showToast(`${tipo} registrado y sincronizado con la nube ☁️`, "success");
-        actualizarHistorialDesdeServidor(true);
-
-      } else if(resp && resp.status === "rejected"){
-        ultimoEstadoServidor = resp.ultimoEstado || ultimoEstadoServidor;
-        servidorVerificado = true; ultimaVerificacionTs = new Date();
-        setBotonesCargando(false);
-        const tipoServidor = resp.ultimoEstado ? resp.ultimoEstado.tipo : null;
-        showToast(
-          tipoServidor === "Ingreso"
-            ? "Ya existe un Ingreso activo registrado desde otro dispositivo."
-            : "No hay un Ingreso activo según el servidor. No se registró el Egreso.",
-          "error"
-        );
-        actualizarHistorialDesdeServidor(true);
-      } else {
-        throw new Error("Respuesta inesperada del servidor");
-      }
-    }catch(err){
-      console.error("Fallo al validar con el servidor:", err);
-      marcas.push(marcaTentativa); saveMarcas(marcas);
-      setBotonesCargando(false);
-      showToast(`${tipo} guardado localmente. No se pudo confirmar con el servidor; se reintentará.`, "warning");
-    }
-  }
-
-  function resetAll(){
-    if(!confirm("¿Borrar las marcas pendientes/locales de este dispositivo? Esto no afecta lo ya guardado en Google Sheets.")) return;
-    marcas = [];
-    saveMarcas(marcas); render();
-    showToast("Marcas locales pendientes eliminadas", "success");
-  }
-
-  // ---------- Edición de un registro existente ----------
-  function abrirModalEdicion(id, origen, tipoLabel, fechaISO, horaActual, fechaLabel, contraparteRaw){
-    modalEditId = id;
-    modalEditOrigen = origen;
-    modalEditTipo = tipoLabel;
-    modalEditContraparteRaw = contraparteRaw || null;
-
-    document.getElementById("editModalTitle").textContent = `Editar hora de ${tipoLabel}`;
-    document.getElementById("editModalSub").textContent = fechaLabel;
-    document.getElementById("editModalDateInput").value = fechaISO;
-    document.getElementById("editModalTimeInput").value = horaActual;
-    document.getElementById("editModalError").textContent = "";
-    document.getElementById("editModalOverlay").classList.add("show");
-  }
-  function cerrarModalEdicion(){
-    document.getElementById("editModalOverlay").classList.remove("show");
-    modalEditId = null; modalEditOrigen = null; modalEditTipo = null; modalEditContraparteRaw = null;
-  }
-  function mostrarErrorModal(msg){ document.getElementById("editModalError").textContent = msg; }
-  function setModalGuardando(loading){
-    modalGuardando = loading;
-    const btn = document.getElementById("editModalGuardar");
-    btn.disabled = loading;
-    btn.textContent = loading ? "Guardando..." : "Guardar";
-  }
-
-  function editarMarcaLocal(id, nuevaFecha, horaEditada){
-    const m = marcas.find(x => x.id === id);
-    if(!m) return false;
-    const nuevoRaw = new Date(`${nuevaFecha}T${horaEditada}:00`);
-    const nuevoRounded = roundToNearest15(nuevoRaw);
-    m.raw = nuevoRaw.toISOString();
-    m.rounded = nuevoRounded.toISOString();
-    saveMarcas(marcas);
-    return true;
-  }
-
-  async function guardarEdicion(){
-    const nuevaFecha = document.getElementById("editModalDateInput").value;
-    const nuevaHora = document.getElementById("editModalTimeInput").value;
-
-    if(!nuevaFecha){ mostrarErrorModal("Ingresá una fecha válida."); return; }
-    if(!nuevaHora){ mostrarErrorModal("Ingresá una hora válida."); return; }
-
-    const nuevoMomento = new Date(`${nuevaFecha}T${nuevaHora}:00`);
-    if(isNaN(nuevoMomento.getTime())){ mostrarErrorModal("Fecha u hora inválida."); return; }
-
-    if(modalEditContraparteRaw){
-      const contraparte = new Date(modalEditContraparteRaw);
-      const inconsistente =
-        (modalEditTipo === "Ingreso" && nuevoMomento >= contraparte) ||
-        (modalEditTipo === "Egreso" && nuevoMomento <= contraparte);
-      if(inconsistente){
-        const seguir = confirm(
-          modalEditTipo === "Ingreso"
-            ? "La nueva fecha/hora de Ingreso es igual o posterior a la Salida de esa sesión. ¿Guardar igual?"
-            : "La nueva fecha/hora de Egreso es igual o anterior al Ingreso de esa sesión. ¿Guardar igual?"
-        );
-        if(!seguir) return;
-      }
-    }
-
-    if(modalEditOrigen === "local"){
-      const ok = editarMarcaLocal(modalEditId, nuevaFecha, nuevaHora);
-      if(ok){
-        cerrarModalEdicion();
-        showToast("Registro actualizado localmente. Se sincronizará con la nube.", "success");
-        render();
-        reintentarPendientes(true);
-      } else {
-        mostrarErrorModal("No se encontró el registro localmente.");
-      }
-      return;
-    }
-
-    setModalGuardando(true);
-    try{
-      const resp = await editarMarcaEnServidor(modalEditId, nuevaFecha, nuevaHora);
-      if(resp && resp.status === "ok"){
-        cerrarModalEdicion();
-        showToast("Registro corregido en Google Sheets ☁️", "success");
-        await actualizarHistorialDesdeServidor(true);
-        await actualizarEstadoDesdeServidor(true);
-      } else {
-        mostrarErrorModal(
-          resp && resp.motivo === "no_encontrado"
-            ? "No se encontró el registro en la hoja."
-            : "No se pudo actualizar. Intentá de nuevo."
-        );
-      }
-    }catch(err){
-      console.error(err);
-      mostrarErrorModal("Error de conexión. Verificá tu internet e intentá de nuevo.");
-    }finally{
-      setModalGuardando(false);
-    }
-  }
-
-  // ---------- Carga manual de un registro nuevo ----------
-  function abrirModalAgregar(){
-    addTipoSeleccionado = "Ingreso";
-    document.getElementById("addTipoIngreso").classList.add("active");
-    document.getElementById("addTipoEgreso").classList.remove("active");
-    document.getElementById("addModalDateInput").value = dateOnlyISO(new Date());
-    document.getElementById("addModalTimeInput").value = fmtTime(new Date());
-    document.getElementById("addModalError").textContent = "";
-    document.getElementById("addModalOverlay").classList.add("show");
-  }
-  function cerrarModalAgregar(){ document.getElementById("addModalOverlay").classList.remove("show"); }
-  function mostrarErrorAgregar(msg){ document.getElementById("addModalError").textContent = msg; }
-  function setAgregarGuardando(loading){
-    addModalGuardando = loading;
-    const btn = document.getElementById("addModalGuardar");
-    btn.disabled = loading;
-    btn.textContent = loading ? "Agregando..." : "Agregar";
-  }
-  function seleccionarTipoAgregar(tipo){
-    addTipoSeleccionado = tipo;
-    document.getElementById("addTipoIngreso").classList.toggle("active", tipo === "Ingreso");
-    document.getElementById("addTipoEgreso").classList.toggle("active", tipo === "Egreso");
-  }
-
-  function contextoLegible(contexto){
-    if(!contexto) return "";
-    const fechaLbl = contexto.fecha || (contexto.timestamp ? dateOnlyISO(contexto.timestamp) : "");
-    const horaLbl = contexto.horaRedondeada || (contexto.timestamp ? fmtTime(contexto.timestamp) : "");
-    return `${contexto.tipo} del ${fechaLbl} ${horaLbl ? "a las " + horaLbl : ""}`.trim();
-  }
-
-  async function ejecutarAgregarManual(fecha, hora, tipo, forzar){
-    return agregarMarcaManualEnServidor(
-      fecha, hora, tipo,
-      Date.now().toString(36) + Math.random().toString(36).slice(2,6),
-      forzar
-    );
-  }
-
-  async function guardarRegistroManual(){
-    const fecha = document.getElementById("addModalDateInput").value;
-    const hora = document.getElementById("addModalTimeInput").value;
-
-    if(!fecha){ mostrarErrorAgregar("Ingresá una fecha válida."); return; }
-    if(!hora){ mostrarErrorAgregar("Ingresá una hora válida."); return; }
-
-    if(!navigator.onLine){
-      const raw = new Date(`${fecha}T${hora}:00`);
-      if(isNaN(raw.getTime())){ mostrarErrorAgregar("Fecha u hora inválida."); return; }
-      const rounded = roundToNearest15(raw);
-      marcas.push({
-        id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
-        tipo: addTipoSeleccionado, raw: raw.toISOString(), rounded: rounded.toISOString(), synced: false
+      const { data, error } = await sb.rpc("registrar_marca_segura", {
+        p_id: id,
+        p_tipo: tipo,
+        p_timestamp_real: ahora.toISOString(),
+        p_timestamp_redondeado: redondeada.toISOString(),
+        p_empleado_id: selectedEmpleadoId
       });
-      saveMarcas(marcas);
-      cerrarModalAgregar();
-      showToast("Registro guardado localmente. Sin conexión: se sincronizará luego.", "warning");
-      render();
-      return;
-    }
 
-    setAgregarGuardando(true);
-    try{
-      let resp = await ejecutarAgregarManual(fecha, hora, addTipoSeleccionado, false);
-
-      if(resp && resp.status === "warning"){
-        const detalle = contextoLegible(resp.contexto);
-        const seguir = confirm(
-          `Este registro quedaría con el mismo tipo (${addTipoSeleccionado}) que el más cercano en el tiempo` +
-          (detalle ? ` (${detalle})` : "") +
-          `. Puede ser un dato inconsistente. ¿Agregarlo igual?`
+      if(error) throw error;
+      if(data && data.status === "rejected"){
+        showToast(
+          data.motivo === "no_autorizado"
+            ? "No tenés permisos para fichar por otro usuario."
+            : `Ya existe un ${tipo} registrado como último estado.`,
+          "warning"
         );
-        if(!seguir){ setAgregarGuardando(false); return; }
-        resp = await ejecutarAgregarManual(fecha, hora, addTipoSeleccionado, true);
-      }
-
-      if(resp && resp.status === "ok"){
-        cerrarModalAgregar();
-        showToast("Registro manual agregado a Google Sheets ☁️", "success");
-        await actualizarHistorialDesdeServidor(true);
-        await actualizarEstadoDesdeServidor(true);
       } else {
-        mostrarErrorAgregar("No se pudo agregar el registro. Intentá de nuevo.");
+        showToast(`${tipo} registrado (${formatHoraAR(redondeada)})`, "success");
       }
+      await Promise.all([
+        actualizarEstadoDesdeServidor(true),
+        actualizarHistorialDesdeServidor(true)
+      ]);
     }catch(err){
       console.error(err);
-      mostrarErrorAgregar("Error de conexión. Verificá tu internet e intentá de nuevo.");
+      showToast("Error al registrar la marca: " + (err.message || ""), "error");
     }finally{
-      setAgregarGuardando(false);
+      registrando = false;
+      render();
     }
   }
 
-  // ---------- PAGOS: cálculo ----------
-  function getUltimoPago(){
-    if(!pagosServidor.length) return null;
-    return [...pagosServidor].sort((a,b) => new Date(b.hasta) - new Date(a.hasta))[0];
+  // ================= CÁLCULO DE HORAS =================
+  function calcularJornadas(marcas){
+    const ordenadas = [...marcas].sort((a,b) => new Date(a.timestampRedondeado) - new Date(b.timestampRedondeado));
+    const sesiones = [];
+    let entradaActual = null;
+
+    for(const m of ordenadas){
+      if(m.tipo === "INGRESO"){
+        entradaActual = m;
+      } else if(m.tipo === "EGRESO" && entradaActual){
+        const ini = new Date(entradaActual.timestampRedondeado);
+        const fin = new Date(m.timestampRedondeado);
+        const ms = Math.max(0, fin - ini);
+        sesiones.push({
+          fecha: toLocalDateStr(ini),
+          inicio: ini,
+          fin: fin,
+          ms: ms,
+          horas: ms / 3600000
+        });
+        entradaActual = null;
+      }
+    }
+    return sesiones;
   }
 
-  // Un turno se cuenta en el período si TERMINÓ (salida redondeada) después de "desde"
-  // y hasta "hasta". Así ningún turno se pierde ni se paga dos veces: un turno que
-  // cruza el corte, o que sigue abierto, entra completo en el pago siguiente.
-  function calcularPeriodoPago(desde, hasta){
-    const sesiones = buildSesiones(getMarcasCombinadas());
-    const incluidas = [];
-    let enCurso = 0;
-    sesiones.forEach(s => {
-      if(s.entradaRounded && !s.salidaRounded){ enCurso++; return; }
-      if(!s.entradaRounded || !s.salidaRounded) return;
-      const sal = new Date(s.salidaRounded);
-      if((!desde || sal > desde) && sal <= hasta) incluidas.push(s);
+  function calcularHorasSinPagar(){
+    const sesiones = calcularJornadas(historialServidor);
+    const fechaCorte = pagosServidor.reduce((max, p) => (p.hasta && p.hasta > max ? p.hasta : max), "");
+    const pendientes = fechaCorte ? sesiones.filter(s => s.fecha > fechaCorte) : sesiones;
+    const totalHoras = pendientes.reduce((acc, s) => acc + s.horas, 0);
+    return { totalHoras, fechaCorte };
+  }
+
+  // ================= RENDER UI =================
+  function tickClock(){
+    const now = new Date();
+    document.getElementById("clockTime").textContent = now.toLocaleTimeString("es-AR", { hour12: false });
+    document.getElementById("clockDate").textContent = now.toLocaleDateString("es-AR", {
+      weekday: "long", day: "numeric", month: "long", year: "numeric"
     });
-    incluidas.sort((a,b) => new Date(a.entradaRounded) - new Date(b.entradaRounded));
-    const horas = incluidas.reduce((acc,s) =>
-      acc + hoursDecimal(new Date(s.entradaRounded).getTime(), new Date(s.salidaRounded).getTime()), 0);
-    return { sesiones: incluidas, horas, enCurso };
   }
 
-  function periodoTexto(p){
-    const d = p.desde ? fmtDateTimeLarga(p.desde) : "inicio";
-    return `${d} → ${fmtDateTimeLarga(p.hasta)}`;
+  function render(){
+    const online = navigator.onLine;
+    document.getElementById("offlineBanner").classList.toggle("hidden", online);
+    document.getElementById("syncIndicator").textContent = online ? "Sincronizado" : "Sin red";
+
+    const dot = document.getElementById("statusDot");
+    const stText = document.getElementById("statusText");
+    const stSub = document.getElementById("statusSub");
+    const btnIn = document.getElementById("btnIngreso");
+    const btnOut = document.getElementById("btnEgreso");
+
+    if(!estadoServidor.cargado){
+      dot.className = "dot";
+      stText.textContent = "Consultando servidor...";
+      stSub.textContent = "";
+      btnIn.disabled = true;
+      btnOut.disabled = true;
+    } else if(estadoServidor.tipo === "INGRESO"){
+      dot.className = "dot in";
+      stText.textContent = "EN TURNO (Trabajando)";
+      stSub.textContent = `Ingresó el ${formatFechaAR(estadoServidor.timestamp)} a las ${formatHoraAR(estadoServidor.timestamp)}`;
+      btnIn.disabled = true;
+      btnOut.disabled = registrando || !online;
+    } else {
+      dot.className = "dot out";
+      stText.textContent = "FUERA DE TURNO";
+      stSub.textContent = estadoServidor.timestamp
+        ? `Último egreso: ${formatFechaAR(estadoServidor.timestamp)} a las ${formatHoraAR(estadoServidor.timestamp)}`
+        : "Sin marcas previas registradas";
+      btnIn.disabled = registrando || !online;
+      btnOut.disabled = true;
+    }
+
+    // Resumen semana actual
+    const hoyStr = toLocalDateStr(new Date());
+    const lunesSemana = startOfWeekMonday(new Date());
+    const sesiones = calcularJornadas(historialServidor);
+    const sesHoy = sesiones.filter(s => s.fecha === hoyStr);
+    const sesSem = sesiones.filter(s => s.inicio >= lunesSemana);
+    const diasUnicos = new Set(sesSem.map(s => s.fecha));
+
+    document.getElementById("statHorasHoy").textContent = formatDuracion(sesHoy.reduce((a,b) => a + b.ms, 0));
+    document.getElementById("statHorasSemana").textContent = formatDuracion(sesSem.reduce((a,b) => a + b.ms, 0));
+    document.getElementById("statDiasSemana").textContent = String(diasUnicos.size);
+
+    renderHistorial();
+    renderPagos();
+    actualizarPreviewReporte();
   }
 
-  // ---------- PAGOS: modal ----------
-  function abrirModalPago(){
-    if(!pagosCargados){
-      showToast("Todavía se están cargando los pagos. Probá de nuevo en unos segundos.", "warning");
-      if(!actualizandoPagos) actualizarPagosDesdeServidor(false);
+  function renderHistorial(){
+    const cont = document.getElementById("historialLista");
+    const ahora = new Date();
+    const lunes = startOfWeekMonday(ahora);
+    const primerDiaMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+
+    const filtradas = historialServidor.filter(m => {
+      const d = new Date(m.timestampRedondeado);
+      if(histFiltro === "semana") return d >= lunes;
+      if(histFiltro === "mes") return d >= primerDiaMes;
+      return true;
+    });
+
+    if(!filtradas.length){
+      cont.innerHTML = `<div class="empty-msg">No hay marcas registradas en este período.</div>`;
       return;
     }
-    const ultimo = getUltimoPago();
-    const ahora = new Date();
 
-    let desdeDef;
-    if(ultimo){
-      desdeDef = new Date(ultimo.hasta);
-    } else {
-      const cerradas = buildSesiones(getMarcasCombinadas()).filter(s => s.entradaRounded && s.salidaRounded);
-      if(cerradas.length){
-        const primera = cerradas.reduce((min,s) => new Date(s.entradaRounded) < min ? new Date(s.entradaRounded) : min, new Date(cerradas[0].entradaRounded));
-        desdeDef = new Date(primera); desdeDef.setHours(0,0,0,0);
-      } else {
-        desdeDef = new Date(ahora);
-      }
+    // Agrupar por día (descendente)
+    const grupos = {};
+    for(const m of filtradas){
+      const k = toLocalDateStr(m.timestampRedondeado);
+      if(!grupos[k]) grupos[k] = [];
+      grupos[k].push(m);
     }
 
-    document.getElementById("payTarifa").value = ultimo ? ultimo.tarifa : "";
-    document.getElementById("payTarifaHint").textContent = ultimo
-      ? `Último valor usado: ${fmtMoney(ultimo.tarifa)}. Confirmalo o cambialo.`
-      : "Ingresá el valor por hora acordado.";
-    document.getElementById("payDesde").value = toLocalInputValue(desdeDef);
-    document.getElementById("payHasta").value = toLocalInputValue(ahora);
-    document.getElementById("payNotas").value = "";
-    document.getElementById("payError").textContent = "";
-    actualizarPreviewPago();
-    document.getElementById("payModalOverlay").classList.add("show");
-    setTimeout(() => document.getElementById("payTarifa").focus(), 200);
-  }
-  function cerrarModalPago(){ document.getElementById("payModalOverlay").classList.remove("show"); }
-  function mostrarErrorPago(msg){ document.getElementById("payError").textContent = msg; }
-  function setPayGuardando(loading){
-    payGuardando = loading;
-    const btn = document.getElementById("payRegistrar");
-    btn.disabled = loading;
-    document.getElementById("payPrint").disabled = loading;
-    document.getElementById("payPDF").disabled = loading;
-    btn.textContent = loading ? "Registrando..." : "Registrar pago";
-  }
+    const fechasOrd = Object.keys(grupos).sort((a,b) => b.localeCompare(a));
+    cont.innerHTML = fechasOrd.map(f => {
+      const items = grupos[f];
+      const sesDia = calcularJornadas(items);
+      const totalDiaMs = sesDia.reduce((a,b) => a + b.ms, 0);
+      const rowsHtml = items.map(m => `
+        <div class="marca-row">
+          <div>
+            <span class="${m.tipo === "INGRESO" ? "badge-in" : "badge-out"}">${m.tipo}</span>
+            <span style="margin-left:8px;font-weight:700;">${formatHoraAR(m.timestampRedondeado)}</span>
+          </div>
+          ${esAdmin() ? `
+            <div class="marca-actions">
+              <button class="btn-secondary btn-sm" data-edit="${m.id}">Editar</button>
+              <button class="btn-danger-ghost btn-sm" data-del="${m.id}">Borrar</button>
+            </div>
+          ` : ""}
+        </div>
+      `).join("");
 
-  function leerFormPago(){
-    const tarifa = Number(document.getElementById("payTarifa").value);
-    const dv = document.getElementById("payDesde").value;
-    const hv = document.getElementById("payHasta").value;
-    const desde = dv ? new Date(dv) : null;
-    const hasta = hv ? new Date(hv) : null;
-    const notas = document.getElementById("payNotas").value.trim();
-    return { tarifa, desde, hasta, notas };
-  }
-
-  function actualizarPreviewPago(){
-    const box = document.getElementById("payPreview");
-    const f = leerFormPago();
-    if(!f.hasta || isNaN(f.hasta.getTime())){ box.innerHTML = `<div class="pp-warn">Elegí la fecha y hora "Hasta".</div>`; return; }
-    if(f.desde && (isNaN(f.desde.getTime()) || f.desde >= f.hasta)){
-      box.innerHTML = `<div class="pp-warn">"Desde" tiene que ser anterior a "Hasta".</div>`; return;
-    }
-    const calc = calcularPeriodoPago(f.desde, f.hasta);
-    const tarifaOk = f.tarifa > 0;
-    const monto = tarifaOk ? Math.round(calc.horas * f.tarifa * 100) / 100 : 0;
-    box.innerHTML = `
-      <div class="pp-line"><span>Turnos incluidos</span><b>${calc.sesiones.length}</b></div>
-      <div class="pp-line"><span>Horas trabajadas</span><b>${fmtHoursMin(calc.horas)} h</b></div>
-      <div class="pp-line"><span>Valor por hora</span><b>${tarifaOk ? fmtMoney(f.tarifa) : "—"}</b></div>
-      <div class="pp-total"><span>Total a pagar</span><b>${tarifaOk ? fmtMoney(monto) : "—"}</b></div>
-      ${calc.enCurso ? `<div class="pp-warn">⚠ Hay un turno en curso: no se incluye hasta que marques su Egreso.</div>` : ""}
-    `;
+      return `
+        <div class="day-group">
+          <div class="day-head">
+            <span>${formatFechaAR(f + "T12:00:00")}</span>
+            <span style="color:var(--muted);">${totalDiaMs > 0 ? formatDuracion(totalDiaMs) : "En curso"}</span>
+          </div>
+          ${rowsHtml}
+        </div>
+      `;
+    }).join("");
   }
 
-  async function registrarPago(){
-    if(payGuardando) return;
-    const f = leerFormPago();
-    mostrarErrorPago("");
+  function renderPagos(){
+    const { totalHoras } = calcularHorasSinPagar();
+    const totalAbonado = pagosServidor.reduce((a, p) => a + p.monto, 0);
+    document.getElementById("statHorasSinPagar").textContent = totalHoras.toFixed(2) + " h";
+    document.getElementById("statTotalPagado").textContent = formatMoney(totalAbonado);
+    document.getElementById("statCantPagos").textContent = String(pagosServidor.length);
 
-    if(!(f.tarifa > 0)){ mostrarErrorPago("Ingresá el valor por hora."); return; }
-    if(!f.hasta || isNaN(f.hasta.getTime())){ mostrarErrorPago('Elegí la fecha y hora "Hasta".'); return; }
-    if(f.desde && (isNaN(f.desde.getTime()) || f.desde >= f.hasta)){ mostrarErrorPago('"Desde" tiene que ser anterior a "Hasta".'); return; }
-    if(!navigator.onLine){ mostrarErrorPago("Necesitás conexión a internet para registrar un pago."); return; }
-
-    const calc = calcularPeriodoPago(f.desde, f.hasta);
-    if(calc.horas <= 0){ mostrarErrorPago("No hay horas trabajadas para pagar en ese período."); return; }
-
-    const ultimo = getUltimoPago();
-    if(ultimo && f.desde && f.desde < new Date(ultimo.hasta)){
-      const seguir = confirm(
-        `El período empieza antes del final del último pago (${fmtDateTimeLarga(ultimo.hasta)}). ` +
-        `Algunas horas podrían pagarse dos veces. ¿Registrar igual?`
-      );
-      if(!seguir) return;
+    const cont = document.getElementById("pagosLista");
+    if(!pagosServidor.length){
+      cont.innerHTML = `<div class="empty-msg">Aún no hay liquidaciones registradas para este empleado.</div>`;
+      return;
     }
 
-    const horas = Math.round(calc.horas * 100) / 100;
-    const monto = Math.round(calc.horas * f.tarifa * 100) / 100;
-    const pago = {
-      id: "p" + Date.now().toString(36) + Math.random().toString(36).slice(2,6),
-      fechaPago: new Date().toISOString(),
-      desde: f.desde ? f.desde.toISOString() : "",
-      hasta: f.hasta.toISOString(),
-      horas, tarifa: f.tarifa, monto, notas: f.notas
-    };
+    cont.innerHTML = pagosServidor.map(p => `
+      <div class="pay-item">
+        <div class="pay-top">
+          <div>
+            <div style="font-weight:700;font-size:0.9rem;">Liquidación ${p.fechaPago}</div>
+            <div class="pay-meta">Período: ${p.desde || "Inicio"} al ${p.hasta} · ${p.horas.toFixed(2)} hs × ${formatMoney(p.tarifa)}</div>
+            ${p.notas ? `<div class="pay-meta">Nota: ${p.notas}</div>` : ""}
+          </div>
+          <div class="pay-amount">${formatMoney(p.monto)}</div>
+        </div>
+        <div class="pay-actions">
+          <button class="btn-secondary btn-sm" data-pay-pdf="${p.id}">Recibo PDF</button>
+          ${esAdmin() ? `<button class="btn-danger-ghost btn-sm" data-pay-del="${p.id}">Eliminar</button>` : ""}
+        </div>
+      </div>
+    `).join("");
+  }
 
-    setPayGuardando(true);
+  // ================= ADMIN: MARCA MANUAL / EDICIÓN / BORRADO =================
+  function abrirModalManual(marca = null){
+    if(!esAdmin()) return;
+    document.getElementById("manualModalTitle").textContent = marca ? "Editar Marca" : "Agregar Marca Manual";
+    document.getElementById("manualId").value = marca ? marca.id : "";
+    document.getElementById("manualTipo").value = marca ? marca.tipo : "INGRESO";
+    const baseDate = marca ? new Date(marca.timestampRedondeado) : new Date();
+    document.getElementById("manualFecha").value = toLocalDateStr(baseDate);
+    document.getElementById("manualHora").value = toLocalTimeStr(baseDate);
+    document.getElementById("manualModalOverlay").classList.add("open");
+  }
+
+  async function guardarMarcaManual(ev){
+    ev.preventDefault();
+    if(!esAdmin() || !selectedEmpleadoId) return;
+    const id = document.getElementById("manualId").value;
+    const tipo = document.getElementById("manualTipo").value;
+    const fecha = document.getElementById("manualFecha").value;
+    const hora = document.getElementById("manualHora").value;
+    const dt = new Date(`${fecha}T${hora}:00`);
+    if(isNaN(dt)){ showToast("Fecha u hora inválida.", "error"); return; }
+
     try{
-      const resp = await registrarPagoEnServidor(pago);
-      if(resp && resp.status === "ok"){
-        cerrarModalPago();
-        showToast(`Pago de ${fmtMoney(monto)} registrado ☁️`, "success");
-        await actualizarPagosDesdeServidor(true);
-        if(confirm("Pago registrado. ¿Querés imprimir el resumen ahora?")){
-          imprimirResumenPago(pago);
-        }
+      if(id){
+        const { error } = await sb
+          .from("marcas")
+          .update({ tipo, timestamp_real: dt.toISOString(), timestamp_redondeado: dt.toISOString() })
+          .eq("id", id);
+        if(error) throw error;
+        showToast("Marca actualizada.", "success");
       } else {
-        mostrarErrorPago("No se pudo registrar el pago" + (resp && resp.motivo ? ` (${resp.motivo})` : "") + ".");
+        const newId = "man_" + Date.now();
+        const { error } = await sb
+          .from("marcas")
+          .insert({
+            id: newId,
+            empleado_id: selectedEmpleadoId,
+            tipo,
+            timestamp_real: dt.toISOString(),
+            timestamp_redondeado: dt.toISOString()
+          });
+        if(error) throw error;
+        showToast("Marca manual agregada.", "success");
       }
+      document.getElementById("manualModalOverlay").classList.remove("open");
+      await Promise.all([actualizarEstadoDesdeServidor(true), actualizarHistorialDesdeServidor(true)]);
     }catch(err){
-      console.error(err);
-      mostrarErrorPago("Error de conexión. Verificá tu internet e intentá de nuevo.");
-    }finally{
-      setPayGuardando(false);
+      showToast("Error al guardar marca: " + err.message, "error");
+    }
+  }
+
+  async function borrarMarca(id){
+    if(!esAdmin()) return;
+    if(!confirm("¿Eliminar esta marca permanentemente?")) return;
+    try{
+      const { error } = await sb.from("marcas").delete().eq("id", id);
+      if(error) throw error;
+      showToast("Marca eliminada.", "success");
+      await Promise.all([actualizarEstadoDesdeServidor(true), actualizarHistorialDesdeServidor(true)]);
+    }catch(err){
+      showToast("Error al eliminar: " + err.message, "error");
+    }
+  }
+
+  // ================= ADMIN: PAGOS Y RECIBO PDF =================
+  function abrirModalPago(){
+    if(!esAdmin()) return;
+    const { totalHoras, fechaCorte } = calcularHorasSinPagar();
+    const emp = getEmpleadoActivo();
+    const tarifaDef = emp && emp.valor_hora_default ? Number(emp.valor_hora_default) : 0;
+
+    document.getElementById("payDesde").value = fechaCorte || "";
+    document.getElementById("payHasta").value = toLocalDateStr(new Date());
+    document.getElementById("payHoras").value = totalHoras.toFixed(2);
+    document.getElementById("payTarifa").value = tarifaDef || "";
+    document.getElementById("payMonto").value = (totalHoras * tarifaDef).toFixed(2);
+    document.getElementById("payNotas").value = "";
+    document.getElementById("payModalOverlay").classList.add("open");
+  }
+
+  async function guardarPago(ev){
+    ev.preventDefault();
+    if(!esAdmin() || !selectedEmpleadoId) return;
+    const desde = document.getElementById("payDesde").value || null;
+    const hasta = document.getElementById("payHasta").value;
+    const horas = Number(document.getElementById("payHoras").value) || 0;
+    const tarifa = Number(document.getElementById("payTarifa").value) || 0;
+    const monto = Number(document.getElementById("payMonto").value) || 0;
+    const notas = document.getElementById("payNotas").value.trim();
+
+    try{
+      const { error } = await sb.from("pagos").insert({
+        empleado_id: selectedEmpleadoId,
+        fecha_pago: toLocalDateStr(new Date()),
+        desde,
+        hasta,
+        horas,
+        tarifa,
+        monto,
+        notas
+      });
+      if(error) throw error;
+      document.getElementById("payModalOverlay").classList.remove("open");
+      showToast("Liquidación registrada.", "success");
+      await actualizarPagosDesdeServidor(true);
+    }catch(err){
+      showToast("Error al registrar pago: " + err.message, "error");
     }
   }
 
   async function eliminarPago(id){
-    const p = pagosServidor.find(x => x.id === id);
-    if(!p) return;
-    if(!confirm(`¿Eliminar el pago de ${fmtMoney(p.monto)} del ${fmtDateLarga(p.fechaPago)}? Si era el último, esas horas volverán a figurar como pendientes.`)) return;
+    if(!esAdmin()) return;
+    if(!confirm("¿Eliminar este registro de pago?")) return;
     try{
-      const resp = await eliminarPagoEnServidor(id);
-      if(resp && resp.status === "ok"){
-        showToast("Pago eliminado", "success");
-        await actualizarPagosDesdeServidor(true);
-      } else {
-        showToast("No se pudo eliminar el pago.", "error");
-      }
+      const { error } = await sb.from("pagos").delete().eq("id", id);
+      if(error) throw error;
+      showToast("Pago eliminado.", "success");
+      await actualizarPagosDesdeServidor(true);
     }catch(err){
-      console.error(err);
-      showToast("Error de conexión al eliminar el pago.", "error");
+      showToast("Error al eliminar pago: " + err.message, "error");
     }
   }
 
-  // ---------- Impresión ----------
-  const CSS_IMPRESION = `
-    body{font-family:Arial,Helvetica,sans-serif;color:#0E2A47;margin:24px;font-size:12px}
-    h1{font-size:20px;margin:0 0 4px}
-    h2{font-size:14px;margin:22px 0 8px;border-bottom:2px solid #0E2A47;padding-bottom:4px}
-    .meta{color:#5C6B7A;margin:2px 0}
-    table{width:100%;border-collapse:collapse;margin-bottom:6px}
-    th{background:#0E2A47;color:#fff;text-align:left;padding:6px 8px;font-size:11px}
-    td{padding:6px 8px;border-bottom:1px solid #DCE3EA}
-    tr.total td{font-weight:bold;background:#E7F4EE}
-    .num{text-align:right;white-space:nowrap}
-    .box{border:1px solid #DCE3EA;border-radius:6px;padding:10px 14px;margin:14px 0;background:#F7F9FB}
-    .box div{display:flex;justify-content:space-between;padding:3px 0}
-    .box .grand{border-top:2px solid #0E2A47;margin-top:6px;padding-top:8px;font-size:16px;font-weight:bold}
-    .sign{margin-top:60px;display:flex;gap:50px}
-    .sign div{flex:1;border-top:1px solid #0E2A47;padding-top:4px;text-align:center;font-size:11px}
-    .empty{color:#5C6B7A;font-style:italic;padding:8px 0}
-    @media print{ body{margin:12mm} }
-  `;
-
-  function htmlDocumento(titulo, cuerpo){
-    return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>${esc(titulo)}</title><style>${CSS_IMPRESION}</style></head><body>${cuerpo}</body></html>`;
-  }
-
-  function imprimirHtml(html){
-    const iframe = document.createElement("iframe");
-    iframe.setAttribute("aria-hidden", "true");
-    iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;";
-    document.body.appendChild(iframe);
-    const idoc = iframe.contentWindow.document;
-    idoc.open(); idoc.write(html); idoc.close();
-    setTimeout(() => {
-      try{
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
-      }catch(e){
-        console.error(e);
-        showToast("No se pudo abrir la impresión en este navegador.", "error");
-      }
-      setTimeout(() => iframe.remove(), 60000);
-    }, 400);
-  }
-
-  function tablaSesionesHtml(sesiones){
-    if(!sesiones.length) return `<div class="empty">No hay turnos completos en este período.</div>`;
-    let total = 0;
-    const filas = sesiones.map(s => {
-      const ent = new Date(s.entradaRounded), sal = new Date(s.salidaRounded);
-      const h = hoursDecimal(ent.getTime(), sal.getTime());
-      total += h;
-      return `<tr><td>${fmtDateLarga(ent)}</td><td>${DIAS[ent.getDay()]}</td><td>${fmtTime(ent)}</td><td>${fmtTime(sal)}</td><td class="num">${fmtHoursMin(h)} h</td></tr>`;
-    }).join("");
-    return `<table><thead><tr><th>Fecha</th><th>Día</th><th>Ingreso</th><th>Egreso</th><th class="num">Horas</th></tr></thead><tbody>${filas}
-      <tr class="total"><td colspan="4">TOTAL HORAS</td><td class="num">${fmtHoursMin(total)} h</td></tr></tbody></table>`;
-  }
-
-  function imprimirResumenPago(pago){
-    const desde = pago.desde ? new Date(pago.desde) : null;
-    const hasta = new Date(pago.hasta);
-    const calc = calcularPeriodoPago(desde, hasta);
-    const monto = pago.monto != null ? pago.monto : Math.round(calc.horas * pago.tarifa * 100) / 100;
-
-    const cuerpo = `
-      <h1>Resumen de pago</h1>
-      <div class="meta">Período: ${desde ? fmtDateTimeLarga(desde) : "inicio de los registros"} &rarr; ${fmtDateTimeLarga(hasta)}</div>
-      <div class="meta">Generado: ${fmtDateTimeLarga(new Date())}</div>
-      ${pago.fechaPago ? `<div class="meta">Fecha de pago: ${fmtDateTimeLarga(pago.fechaPago)}</div>` : ""}
-      <h2>Turnos incluidos</h2>
-      ${tablaSesionesHtml(calc.sesiones)}
-      <div class="box">
-        <div><span>Total de horas</span><b>${fmtHoursMin(calc.horas)} h</b></div>
-        <div><span>Valor por hora</span><b>${fmtMoney(pago.tarifa)}</b></div>
-        <div class="grand"><span>TOTAL A PAGAR</span><span>${fmtMoney(monto)}</span></div>
-      </div>
-      ${pago.notas ? `<div class="meta">Notas: ${esc(pago.notas)}</div>` : ""}
-      <div class="sign"><div>Firma de quien paga</div><div>Firma de quien recibe</div></div>
-    `;
-    imprimirHtml(htmlDocumento("Resumen de pago", cuerpo));
-  }
-
-  function imprimirResumenPagoPendiente(){
-    const f = leerFormPago();
-    if(!(f.tarifa > 0)){ mostrarErrorPago("Ingresá el valor por hora para imprimir el resumen."); return; }
-    if(!f.hasta || isNaN(f.hasta.getTime())){ mostrarErrorPago('Elegí la fecha y hora "Hasta".'); return; }
-    if(f.desde && f.desde >= f.hasta){ mostrarErrorPago('"Desde" tiene que ser anterior a "Hasta".'); return; }
-    imprimirResumenPago({
-      desde: f.desde ? f.desde.toISOString() : "", hasta: f.hasta.toISOString(),
-      tarifa: f.tarifa, notas: f.notas, fechaPago: ""
-    });
-  }
-
-  function generarPdfResumenPago(pago){
-    if(!jsPdfDisponible()) return;
-    const desde = pago.desde ? new Date(pago.desde) : null;
-    const hasta = new Date(pago.hasta);
-    const calc = calcularPeriodoPago(desde, hasta);
-    const monto = pago.monto != null ? pago.monto : Math.round(calc.horas * pago.tarifa * 100) / 100;
-
+  function generarPdfReciboPago(p){
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
-
-    doc.setFontSize(18);
-    doc.setTextColor(14,42,71);
-    doc.text("Resumen de pago", 40, 48);
-
-    doc.setFontSize(10);
-    doc.setTextColor(92,107,122);
-    let y = 66;
-    doc.text(`Periodo: ${desde ? fmtDateTimeLarga(desde) : "inicio de los registros"} al ${fmtDateTimeLarga(hasta)}`, 40, y);
-    y += 14;
-    doc.text(`Generado: ${fmtDateTimeLarga(new Date())}`, 40, y);
-    if(pago.fechaPago){
-      y += 14;
-      doc.text(`Fecha de pago: ${fmtDateTimeLarga(pago.fechaPago)}`, 40, y);
-    }
-
-    y += 24;
+    const doc = new jsPDF();
+    const emp = getEmpleadoActivo();
+    doc.setFontSize(16);
+    doc.text(NEGOCIO_NOMBRE, 20, 22);
     doc.setFontSize(12);
-    doc.setTextColor(14,42,71);
-    doc.text("Turnos incluidos", 40, y);
-
-    const body = calc.sesiones.length
-      ? calc.sesiones.map(s => {
-          const ent = new Date(s.entradaRounded), sal = new Date(s.salidaRounded);
-          const h = hoursDecimal(ent.getTime(), sal.getTime());
-          return [fmtDateLarga(ent), DIAS[ent.getDay()], fmtTime(ent), fmtTime(sal), fmtHoursMin(h) + " h"];
-        })
-      : [["No hay turnos completos en este periodo.", "", "", "", ""]];
-
-    if(calc.sesiones.length){
-      body.push(["", "", "", "TOTAL HORAS", fmtHoursMin(calc.horas) + " h"]);
-    }
-
-    doc.autoTable({
-      startY: y + 8,
-      head: [["Fecha", "Día", "Ingreso", "Egreso", "Horas"]],
-      body: body,
-      headStyles: { fillColor: [14,42,71], textColor: 255, fontStyle: "bold" },
-      styles: { fontSize: 9, cellPadding: 6 },
-      columnStyles: { 4: { halign: "right" } },
-      alternateRowStyles: { fillColor: [242,245,248] },
-      didParseCell: function(data){
-        if(calc.sesiones.length && data.row.index === body.length - 1){
-          data.cell.styles.fontStyle = "bold";
-          data.cell.styles.fillColor = [231,244,238];
-        }
-      }
-    });
-
-    y = doc.lastAutoTable.finalY + 20;
-    if(y > 680){ doc.addPage(); y = 50; }
-
-    doc.setFillColor(247,249,251);
-    doc.setDrawColor(220,227,234);
-    doc.roundedRect(40, y, 515, 76, 6, 6, "FD");
+    doc.text("Comprobante de Liquidación de Horas", 20, 31);
+    doc.line(20, 35, 190, 35);
 
     doc.setFontSize(10);
-    doc.setTextColor(92,107,122);
-    doc.text("Total de horas:", 54, y + 20);
-    doc.setTextColor(14,42,71);
-    doc.setFont(undefined, "bold");
-    doc.text(`${fmtHoursMin(calc.horas)} h`, 541, y + 20, { align: "right" });
-
-    doc.setFont(undefined, "normal");
-    doc.setTextColor(92,107,122);
-    doc.text("Valor por hora:", 54, y + 36);
-    doc.setTextColor(14,42,71);
-    doc.setFont(undefined, "bold");
-    doc.text(fmtMoney(pago.tarifa), 541, y + 36, { align: "right" });
-
-    doc.setDrawColor(14,42,71);
-    doc.setLineWidth(1);
-    doc.line(54, y + 45, 541, y + 45);
-
+    doc.text(`Empleado: ${emp ? emp.nombre : "-"}`, 20, 45);
+    doc.text(`Fecha de emisión: ${p.fechaPago}`, 20, 52);
+    doc.text(`Período liquidado: ${p.desde || "Inicio"} al ${p.hasta}`, 20, 59);
+    doc.text(`Horas liquidadas: ${p.horas.toFixed(2)} hs`, 20, 66);
+    doc.text(`Valor por hora: ${formatMoney(p.tarifa)}`, 20, 73);
     doc.setFontSize(13);
-    doc.text("TOTAL A PAGAR", 54, y + 64);
-    doc.text(fmtMoney(monto), 541, y + 64, { align: "right" });
-    doc.setFont(undefined, "normal");
-
-    y += 94;
-    if(pago.notas){
-      doc.setFontSize(9.5);
-      doc.setTextColor(92,107,122);
-      const notasLines = doc.splitTextToSize(`Notas: ${pago.notas}`, 515);
-      doc.text(notasLines, 40, y);
-      y += notasLines.length * 12 + 12;
+    doc.text(`Total abonado: ${formatMoney(p.monto)}`, 20, 84);
+    if(p.notas){
+      doc.setFontSize(10);
+      doc.text(`Observaciones: ${p.notas}`, 20, 94);
     }
-
-    y += 45;
-    if(y > 780){ doc.addPage(); y = 80; }
-    doc.setDrawColor(14,42,71);
-    doc.setLineWidth(0.8);
-    doc.line(60, y, 260, y);
-    doc.line(335, y, 535, y);
+    doc.line(20, 125, 90, 125);
     doc.setFontSize(9);
-    doc.setTextColor(14,42,71);
-    doc.text("Firma de quien paga", 160, y + 14, { align: "center" });
-    doc.text("Firma de quien recibe", 435, y + 14, { align: "center" });
+    doc.text("Firma Empleador", 20, 130);
+    doc.line(115, 125, 185, 125);
+    doc.text("Firma Empleado", 115, 130);
 
-    const fechaArchivo = dateOnlyISO(pago.fechaPago ? new Date(pago.fechaPago) : hasta);
-    doc.save(`resumen_pago_${fechaArchivo}.pdf`);
-    showToast("Resumen de pago descargado en PDF", "success");
+    doc.save(`Recibo_${(emp ? emp.nombre : "Empleado").replace(/\s+/g,"_")}_${p.fechaPago}.pdf`);
   }
 
-  function descargarPdfPagoPendiente(){
-    const f = leerFormPago();
-    mostrarErrorPago("");
-    if(!(f.tarifa > 0)){ mostrarErrorPago("Ingresá el valor por hora para descargar el PDF."); return; }
-    if(!f.hasta || isNaN(f.hasta.getTime())){ mostrarErrorPago('Elegí la fecha y hora "Hasta".'); return; }
-    if(f.desde && f.desde >= f.hasta){ mostrarErrorPago('"Desde" tiene que ser anterior a "Hasta".'); return; }
-    generarPdfResumenPago({
-      desde: f.desde ? f.desde.toISOString() : "", hasta: f.hasta.toISOString(),
-      tarifa: f.tarifa, notas: f.notas, fechaPago: ""
-    });
-  }
-
-  // ---------- Rangos y reportes ----------
-  function calcularRangoGenerico(tipo, idDesde, idHasta){
-    const now = new Date();
-    if(tipo === "semana_actual") return getWeekRange(now);
-    if(tipo === "semana_anterior"){
-      const prev = new Date(now); prev.setDate(prev.getDate() - 7);
-      return getWeekRange(prev);
+  // ================= REPORTES CSV / PDF =================
+  function getRangoReporteFechas(){
+    const hoy = new Date();
+    const hasta = toLocalDateStr(hoy);
+    if(rangoReporteSeleccionado === "semana"){
+      return { desde: toLocalDateStr(startOfWeekMonday(hoy)), hasta };
     }
-    if(tipo === "mes_actual"){
-      const start = new Date(now.getFullYear(), now.getMonth(), 1);
-      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0); end.setHours(23,59,59,999);
-      return { start, end };
+    if(rangoReporteSeleccionado === "quincena"){
+      const d = new Date(hoy); d.setDate(d.getDate() - 14);
+      return { desde: toLocalDateStr(d), hasta };
     }
-    if(tipo === "mes_anterior"){
-      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const end = new Date(now.getFullYear(), now.getMonth(), 0); end.setHours(23,59,59,999);
-      return { start, end };
+    if(rangoReporteSeleccionado === "mes"){
+      return { desde: toLocalDateStr(new Date(hoy.getFullYear(), hoy.getMonth(), 1)), hasta };
     }
-    if(tipo === "personalizado"){
-      const desdeStr = document.getElementById(idDesde).value;
-      const hastaStr = document.getElementById(idHasta).value;
-      if(!desdeStr || !hastaStr) return null;
-      const start = new Date(`${desdeStr}T00:00:00`);
-      const end = new Date(`${hastaStr}T23:59:59`);
-      if(isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return null;
-      return { start, end };
-    }
-    return null;
-  }
-  function calcularRangoReporte(tipo){ return calcularRangoGenerico(tipo, "reportDesde", "reportHasta"); }
-  function calcularRangoPagos(tipo){ return calcularRangoGenerico(tipo, "rpDesde", "rpHasta"); }
-
-  function obtenerFilasReporte(start, end){
-    const combinadas = getMarcasCombinadas();
-    const sesiones = buildSesiones(combinadas);
-    const filtradas = sesiones
-      .filter(s => {
-        const ref = s.entradaRaw || s.salidaRaw;
-        if(!ref) return false;
-        const d = new Date(ref);
-        return d >= start && d <= end;
-      })
-      .sort((a,b) => new Date(a.entradaRaw || a.salidaRaw) - new Date(b.entradaRaw || b.salidaRaw));
-
-    return filtradas.map(s => {
-      const ref = s.entradaRaw || s.salidaRaw;
-      const refDate = new Date(ref);
-      const horasDecimal = (s.entradaRounded && s.salidaRounded)
-        ? hoursDecimal(new Date(s.entradaRounded).getTime(), new Date(s.salidaRounded).getTime())
-        : 0;
-      let observaciones = "";
-      if(!s.entradaRounded) observaciones = "Sin ingreso registrado";
-      else if(!s.salidaRounded) observaciones = "En curso / sin egreso";
-
-      return {
-        fecha: fmtDateLarga(refDate),
-        dia: DIAS[refDate.getDay()],
-        horaIngreso: s.entradaRounded ? fmtTime(s.entradaRounded) : "—",
-        horaEgreso: s.salidaRounded ? fmtTime(s.salidaRounded) : "—",
-        horasDecimal,
-        horasLabel: (s.entradaRounded && s.salidaRounded) ? fmtHoursMin(horasDecimal) : "—",
-        observaciones
-      };
-    });
-  }
-
-  function nombreArchivoReporte(rango, ext, prefijo){
-    return `${prefijo || "reporte_ingreso_egreso"}_${dateOnlyISO(rango.start)}_a_${dateOnlyISO(rango.end)}.${ext}`;
-  }
-
-  function pagosDelPeriodo(start, end){
-    return pagosServidor
-      .filter(p => { const d = new Date(p.fechaPago); return d >= start && d <= end; })
-      .sort((a,b) => new Date(a.fechaPago) - new Date(b.fechaPago));
+    return {
+      desde: document.getElementById("reportDesde").value || "2000-01-01",
+      hasta: document.getElementById("reportHasta").value || hasta
+    };
   }
 
   function actualizarPreviewReporte(){
-    const preview = document.getElementById("reportPreview");
-    const rango = calcularRangoReporte(rangoReporteSeleccionado);
-    if(!rango){ preview.textContent = "Seleccioná las dos fechas del rango personalizado."; return; }
-    const filas = obtenerFilasReporte(rango.start, rango.end);
-    const totalHoras = filas.reduce((acc,f) => acc + f.horasDecimal, 0);
-    preview.textContent = `${fmtDateShort(rango.start)} — ${fmtDateShort(rango.end)} · ${filas.length} registro(s) · Total: ${fmtHoursMin(totalHoras)} h`;
-  }
-
-  function actualizarPreviewPagos(){
-    const preview = document.getElementById("rpPreview");
-    const rango = calcularRangoPagos(rangoPagosSeleccionado);
-    if(!rango){ preview.textContent = "Seleccioná las dos fechas del rango personalizado."; return; }
-    const filas = obtenerFilasReporte(rango.start, rango.end);
-    const totalHoras = filas.reduce((acc,f) => acc + f.horasDecimal, 0);
-    const pagos = pagosDelPeriodo(rango.start, rango.end);
-    const totalPagado = pagos.reduce((acc,p) => acc + p.monto, 0);
-    preview.innerHTML =
-      `${fmtDateShort(rango.start)} — ${fmtDateShort(rango.end)}<br>` +
-      `${filas.length} turno(s) · ${fmtHoursMin(totalHoras)} h trabajadas<br>` +
-      `${pagos.length} pago(s) · ${fmtMoney(totalPagado)} pagado`;
-  }
-
-  function escaparCSV(valor){
-    const str = String(valor ?? "");
-    if(str.includes(";") || str.includes('"') || str.includes("\n")){
-      return `"${str.replace(/"/g,'""')}"`;
-    }
-    return str;
-  }
-
-  function descargarBlob(blob, filename){
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    const { desde, hasta } = getRangoReporteFechas();
+    const sesiones = calcularJornadas(historialServidor).filter(s => s.fecha >= desde && s.fecha <= hasta);
+    const totalHoras = sesiones.reduce((a,b) => a + b.horas, 0);
+    document.getElementById("reportPreviewText").textContent =
+      `Período ${desde} al ${hasta}: ${sesiones.length} turnos completos (${totalHoras.toFixed(2)} hs).`;
   }
 
   function descargarReporteCSV(){
-    const rango = calcularRangoReporte(rangoReporteSeleccionado);
-    if(!rango){ showToast("Seleccioná un rango de fechas válido.", "warning"); return; }
-    const filas = obtenerFilasReporte(rango.start, rango.end);
-    if(filas.length === 0){ showToast("No hay registros en el rango seleccionado.", "warning"); return; }
-
-    const header = ["Fecha","Día","Hora Ingreso","Hora Egreso","Total Horas","Observaciones"];
-    const lineas = [header.join(";")];
-    filas.forEach(f => {
-      lineas.push([f.fecha, f.dia, f.horaIngreso, f.horaEgreso, f.horasLabel, f.observaciones].map(escaparCSV).join(";"));
-    });
-    const totalHoras = filas.reduce((acc,f) => acc + f.horasDecimal, 0);
-    lineas.push(["", "", "", "TOTAL", fmtHoursMin(totalHoras), ""].map(escaparCSV).join(";"));
-
-    const csvContent = "\uFEFF" + lineas.join("\r\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    descargarBlob(blob, nombreArchivoReporte(rango, "csv"));
-    showToast("Reporte CSV descargado", "success");
-  }
-
-  function jsPdfDisponible(){
-    if(!window.jspdf || !window.jspdf.jsPDF){
-      showToast("No se pudo cargar el generador de PDF. Verificá tu conexión e intentá de nuevo.", "error");
-      return false;
+    const { desde, hasta } = getRangoReporteFechas();
+    const emp = getEmpleadoActivo();
+    const sesiones = calcularJornadas(historialServidor).filter(s => s.fecha >= desde && s.fecha <= hasta);
+    const filas = [["Empleado", "Fecha", "Ingreso", "Egreso", "Horas"]];
+    for(const s of sesiones){
+      filas.push([emp ? emp.nombre : "", s.fecha, formatHoraAR(s.inicio), formatHoraAR(s.fin), s.horas.toFixed(2)]);
     }
-    return true;
+    const csv = filas.map(r => r.join(";")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `Horas_${(emp ? emp.nombre : "Empleado").replace(/\s+/g,"_")}_${desde}_a_${hasta}.csv`;
+    a.click();
   }
 
   function descargarReportePDF(){
-    const rango = calcularRangoReporte(rangoReporteSeleccionado);
-    if(!rango){ showToast("Seleccioná un rango de fechas válido.", "warning"); return; }
-    const filas = obtenerFilasReporte(rango.start, rango.end);
-    if(filas.length === 0){ showToast("No hay registros en el rango seleccionado.", "warning"); return; }
-    if(!jsPdfDisponible()) return;
-
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const doc = new jsPDF();
+    const { desde, hasta } = getRangoReporteFechas();
+    const emp = getEmpleadoActivo();
+    const sesiones = calcularJornadas(historialServidor).filter(s => s.fecha >= desde && s.fecha <= hasta);
+    const totalHoras = sesiones.reduce((a,b) => a + b.horas, 0);
 
-    doc.setFontSize(16);
-    doc.setTextColor(14,42,71);
-    doc.text("Reporte de Ingreso y Egreso", 40, 45);
-
+    doc.setFontSize(15);
+    doc.text(`${NEGOCIO_NOMBRE} — Reporte de Horas`, 16, 18);
     doc.setFontSize(10);
-    doc.setTextColor(90,100,110);
-    doc.text(`Periodo: ${fmtDateLarga(rango.start)} al ${fmtDateLarga(rango.end)}`, 40, 63);
-    doc.text(`Generado el ${fmtDateLarga(new Date())} a las ${fmtTime(new Date())}`, 40, 76);
+    doc.text(`Empleado: ${emp ? emp.nombre : "-"} | Período: ${desde} al ${hasta}`, 16, 26);
+    doc.text(`Total acumulado: ${totalHoras.toFixed(2)} horas`, 16, 32);
 
-    const totalHoras = filas.reduce((acc,f) => acc + f.horasDecimal, 0);
-    const body = filas.map(f => [f.fecha, f.dia, f.horaIngreso, f.horaEgreso, f.horasLabel, f.observaciones || "-"]);
-    body.push(["", "", "", "TOTAL", fmtHoursMin(totalHoras), ""]);
+    let y = 42;
+    doc.setFontSize(9);
+    doc.text("Fecha", 16, y);
+    doc.text("Ingreso", 60, y);
+    doc.text("Egreso", 95, y);
+    doc.text("Horas", 135, y);
+    doc.line(16, y+2, 180, y+2);
+    y += 8;
 
-    doc.autoTable({
-      startY: 92,
-      head: [["Fecha","Día","Ingreso","Egreso","Horas","Observaciones"]],
-      body: body,
-      headStyles: { fillColor: [14,42,71], textColor: 255, fontStyle: "bold" },
-      styles: { fontSize: 9, cellPadding: 6 },
-      alternateRowStyles: { fillColor: [242,245,248] },
-      didParseCell: function(data){
-        if(data.row.index === body.length - 1){
-          data.cell.styles.fontStyle = "bold";
-          data.cell.styles.fillColor = [231,244,238];
-        }
-      }
-    });
-
-    doc.save(nombreArchivoReporte(rango, "pdf"));
-    showToast("Reporte PDF descargado", "success");
-  }
-
-  // Reporte de pagos y horas: datos compartidos por impresión y PDF
-  function datosReportePagos(){
-    const rango = calcularRangoPagos(rangoPagosSeleccionado);
-    if(!rango){ showToast("Seleccioná un rango de fechas válido.", "warning"); return null; }
-    const filas = obtenerFilasReporte(rango.start, rango.end);
-    const pagos = pagosDelPeriodo(rango.start, rango.end);
-    if(filas.length === 0 && pagos.length === 0){
-      showToast("No hay turnos ni pagos en el período seleccionado.", "warning");
-      return null;
+    for(const s of sesiones){
+      if(y > 275){ doc.addPage(); y = 20; }
+      doc.text(s.fecha, 16, y);
+      doc.text(formatHoraAR(s.inicio), 60, y);
+      doc.text(formatHoraAR(s.fin), 95, y);
+      doc.text(s.horas.toFixed(2) + " h", 135, y);
+      y += 6;
     }
-    const totalHoras = filas.reduce((acc,f) => acc + f.horasDecimal, 0);
-    const totalPagado = pagos.reduce((acc,p) => acc + p.monto, 0);
-    const horasPagadas = pagos.reduce((acc,p) => acc + p.horas, 0);
-    return { rango, filas, pagos, totalHoras, totalPagado, horasPagadas };
+
+    doc.save(`Reporte_${(emp ? emp.nombre : "Empleado").replace(/\s+/g,"_")}_${desde}.pdf`);
   }
 
-  function imprimirReportePagos(){
-    const d = datosReportePagos();
-    if(!d) return;
+  // ================= EVENTOS =================
+  document.getElementById("loginForm").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const email = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPassword").value;
+    const errBox = document.getElementById("loginError");
+    const btn = document.getElementById("btnLoginSubmit");
 
-    const tablaHoras = d.filas.length
-      ? `<table><thead><tr><th>Fecha</th><th>Día</th><th>Ingreso</th><th>Egreso</th><th class="num">Horas</th><th>Obs.</th></tr></thead><tbody>` +
-        d.filas.map(f => `<tr><td>${f.fecha}</td><td>${f.dia}</td><td>${f.horaIngreso}</td><td>${f.horaEgreso}</td><td class="num">${f.horasLabel}</td><td>${esc(f.observaciones)}</td></tr>`).join("") +
-        `<tr class="total"><td colspan="4">TOTAL HORAS TRABAJADAS</td><td class="num">${fmtHoursMin(d.totalHoras)} h</td><td></td></tr></tbody></table>`
-      : `<div class="empty">No hay turnos en este período.</div>`;
+    errBox.classList.add("hidden");
+    btn.disabled = true;
+    btn.textContent = "Ingresando...";
 
-    const tablaPagos = d.pagos.length
-      ? `<table><thead><tr><th>Fecha de pago</th><th>Período cubierto</th><th class="num">Horas</th><th class="num">Valor hora</th><th class="num">Monto</th></tr></thead><tbody>` +
-        d.pagos.map(p => `<tr><td>${fmtDateTimeLarga(p.fechaPago)}</td><td>${periodoTexto(p)}${p.notas ? `<br><i>${esc(p.notas)}</i>` : ""}</td><td class="num">${fmtHoursMin(p.horas)} h</td><td class="num">${fmtMoney(p.tarifa)}</td><td class="num">${fmtMoney(p.monto)}</td></tr>`).join("") +
-        `<tr class="total"><td colspan="2">TOTAL PAGADO</td><td class="num">${fmtHoursMin(d.horasPagadas)} h</td><td></td><td class="num">${fmtMoney(d.totalPagado)}</td></tr></tbody></table>`
-      : `<div class="empty">No se registraron pagos en este período.</div>`;
-
-    const cuerpo = `
-      <h1>Reporte de pagos y horas trabajadas</h1>
-      <div class="meta">Período: ${fmtDateLarga(d.rango.start)} al ${fmtDateLarga(d.rango.end)}</div>
-      <div class="meta">Generado: ${fmtDateTimeLarga(new Date())}</div>
-      <div class="box">
-        <div><span>Horas trabajadas en el período</span><b>${fmtHoursMin(d.totalHoras)} h</b></div>
-        <div><span>Pagos registrados en el período</span><b>${d.pagos.length}</b></div>
-        <div class="grand"><span>TOTAL PAGADO</span><span>${fmtMoney(d.totalPagado)}</span></div>
-      </div>
-      <h2>Horas trabajadas</h2>
-      ${tablaHoras}
-      <h2>Pagos realizados</h2>
-      ${tablaPagos}
-    `;
-    imprimirHtml(htmlDocumento("Reporte de pagos y horas", cuerpo));
-  }
-
-  function descargarReportePagosPDF(){
-    const d = datosReportePagos();
-    if(!d) return;
-    if(!jsPdfDisponible()) return;
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
-
-    doc.setFontSize(16);
-    doc.setTextColor(14,42,71);
-    doc.text("Reporte de pagos y horas trabajadas", 40, 45);
-
-    doc.setFontSize(10);
-    doc.setTextColor(90,100,110);
-    doc.text(`Periodo: ${fmtDateLarga(d.rango.start)} al ${fmtDateLarga(d.rango.end)}`, 40, 63);
-    doc.text(`Generado el ${fmtDateLarga(new Date())} a las ${fmtTime(new Date())}`, 40, 76);
-    doc.text(`Horas trabajadas: ${fmtHoursMin(d.totalHoras)} h   |   Total pagado: ${fmtMoney(d.totalPagado)}`, 40, 92);
-
-    doc.setFontSize(12);
-    doc.setTextColor(14,42,71);
-    doc.text("Horas trabajadas", 40, 118);
-
-    const bodyHoras = d.filas.map(f => [f.fecha, f.dia, f.horaIngreso, f.horaEgreso, f.horasLabel, f.observaciones || "-"]);
-    bodyHoras.push(["", "", "", "TOTAL", fmtHoursMin(d.totalHoras), ""]);
-    doc.autoTable({
-      startY: 126,
-      head: [["Fecha","Día","Ingreso","Egreso","Horas","Observaciones"]],
-      body: bodyHoras,
-      headStyles: { fillColor: [14,42,71], textColor: 255, fontStyle: "bold" },
-      styles: { fontSize: 9, cellPadding: 5 },
-      alternateRowStyles: { fillColor: [242,245,248] },
-      didParseCell: function(data){
-        if(data.row.index === bodyHoras.length - 1){
-          data.cell.styles.fontStyle = "bold"; data.cell.styles.fillColor = [231,244,238];
-        }
-      }
-    });
-
-    let y = doc.lastAutoTable.finalY + 28;
-    if(y > 740){ doc.addPage(); y = 50; }
-    doc.setFontSize(12);
-    doc.setTextColor(14,42,71);
-    doc.text("Pagos realizados", 40, y);
-
-    const bodyPagos = d.pagos.length
-      ? d.pagos.map(p => [
-          fmtDateTimeLarga(p.fechaPago),
-          periodoTexto(p).replace("→", "a"),
-          fmtHoursMin(p.horas) + " h",
-          fmtMoney(p.tarifa),
-          fmtMoney(p.monto)
-        ])
-      : [["Sin pagos en este periodo", "", "", "", ""]];
-    if(d.pagos.length) bodyPagos.push(["TOTAL PAGADO", "", fmtHoursMin(d.horasPagadas) + " h", "", fmtMoney(d.totalPagado)]);
-
-    doc.autoTable({
-      startY: y + 8,
-      head: [["Fecha de pago","Periodo cubierto","Horas","Valor hora","Monto"]],
-      body: bodyPagos,
-      headStyles: { fillColor: [14,42,71], textColor: 255, fontStyle: "bold" },
-      styles: { fontSize: 9, cellPadding: 5 },
-      alternateRowStyles: { fillColor: [242,245,248] },
-      didParseCell: function(data){
-        if(d.pagos.length && data.row.index === bodyPagos.length - 1){
-          data.cell.styles.fontStyle = "bold"; data.cell.styles.fillColor = [231,244,238];
-        }
-      }
-    });
-
-    doc.save(nombreArchivoReporte(d.rango, "pdf", "reporte_pagos_horas"));
-    showToast("Reporte PDF descargado", "success");
-  }
-
-  // ---------- Rendering ----------
-  function renderConnBadge(){
-    const badge = document.getElementById("connBadge");
-    const text = document.getElementById("connText");
-    if(navigator.onLine){ badge.classList.remove("offline"); text.textContent = "En línea"; }
-    else { badge.classList.add("offline"); text.textContent = "Sin conexión"; }
-  }
-
-  function renderEstadoBox(){
-    const box = document.getElementById("estadoBox");
-    const emoji = document.getElementById("estadoEmoji");
-    const texto = document.getElementById("estadoTexto");
-    const verif = document.getElementById("estadoVerificacion");
-
-    if(botonesCargando){
-      box.className = "estado-box cargando";
-      emoji.textContent = "⏳"; texto.textContent = "Verificando con el servidor...";
-      verif.textContent = "Confirmando con Google Sheets";
-      return;
-    }
-    const estado = getEstadoActual();
-    if(estado === "trabajando"){
-      box.className = "estado-box trabajando"; emoji.textContent = "🟢";
-      texto.textContent = "Estado actual: Trabajando";
-    } else {
-      box.className = "estado-box fuera"; emoji.textContent = "🔴";
-      texto.textContent = "Estado actual: Fuera del trabajo";
-    }
-    if(servidorVerificado){
-      const seg = ultimaVerificacionTs ? Math.max(0, Math.round((Date.now() - ultimaVerificacionTs.getTime())/1000)) : null;
-      verif.textContent = seg !== null ? `✔ Verificado con el servidor (hace ${seg}s)` : "✔ Verificado con el servidor";
-    } else {
-      verif.textContent = "⚠ Sin verificar con el servidor — usando último dato conocido";
-    }
-  }
-
-  function renderBotones(){
-    const estado = getEstadoActual();
-    const btnIngreso = document.getElementById("btnIngreso");
-    const btnEgreso = document.getElementById("btnEgreso");
-    const subIngreso = document.getElementById("subIngreso");
-    const subEgreso = document.getElementById("subEgreso");
-
-    if(botonesCargando){
-      btnIngreso.disabled = true; btnEgreso.disabled = true;
-      subIngreso.textContent = "Verificando..."; subEgreso.textContent = "Verificando...";
-      return;
-    }
-    if(estado === "fuera"){
-      btnIngreso.disabled = false; btnEgreso.disabled = true;
-      subIngreso.textContent = "Marcar entrada"; subEgreso.textContent = "Bloqueado";
-    } else {
-      btnIngreso.disabled = true; btnEgreso.disabled = false;
-      subIngreso.textContent = "Bloqueado"; subEgreso.textContent = "Marcar salida";
-    }
-  }
-
-  function renderStatusRow(){
-    const efectiva = getUltimaMarcaEfectiva();
-    const dot = document.getElementById("statusDot");
-    const text = document.getElementById("statusText");
-    if(!efectiva){ dot.classList.remove("active"); text.textContent = "Sin marcas registradas"; return; }
-    if(efectiva.tipo === "Ingreso"){
-      dot.classList.add("active");
-      text.textContent = `Ingreso activo desde las ${fmtTime(efectiva.rounded)}`;
-    } else {
-      dot.classList.remove("active");
-      text.textContent = `Última salida: ${fmtTime(efectiva.rounded)}`;
-    }
-  }
-
-  function renderFuenteNube(){
-    const el = document.getElementById("fuenteNube");
-    if(actualizandoHistorial){ el.className = "fuente-nube"; el.textContent = "🔄 Actualizando historial desde la nube..."; return; }
-    if(historialError && !historialCargado){ el.className = "fuente-nube error"; el.textContent = "⚠ No se pudo cargar el historial desde Google Sheets."; return; }
-    if(historialCargado){ el.className = "fuente-nube ok"; el.textContent = `☁️ Historial actualizado desde Google Sheets (${historialServidor.length} marcas)`; return; }
-    el.className = "fuente-nube"; el.textContent = "Cargando historial de la nube...";
-  }
-
-  function renderConflictBanner(){
-    const cont = document.getElementById("conflictBanner");
-    const conflictos = marcas.filter(m => m.synced === "conflict");
-    if(conflictos.length === 0){ cont.innerHTML = ""; return; }
-    cont.innerHTML = `<div class="conflict-banner">⚠ ${conflictos.length} marca(s) de este dispositivo no se pudieron guardar porque ya existía una marca en conflicto registrada desde otro lugar.</div>`;
-  }
-
-  function renderPagos(){
-    const sub = document.getElementById("pagosUltimoPago");
-    const big = document.getElementById("pagosHorasPendientes");
-    const pendSub = document.getElementById("pagosPendientesSub");
-    const lista = document.getElementById("pagosLista");
-    const count = document.getElementById("pagosCount");
-    const btn = document.getElementById("btnAbrirPago");
-    const refresh = document.getElementById("btnRefreshPagos");
-
-    if(actualizandoPagos) refresh.classList.add("spinning"); else refresh.classList.remove("spinning");
-
-    if(!pagosCargados){
-      btn.disabled = true;
-      big.textContent = "—";
-      lista.innerHTML = "";
-      count.textContent = "0";
-      if(pagosError){
-        sub.textContent = "⚠ No se pudieron cargar los pagos. Verificá que el Apps Script esté actualizado.";
-        pendSub.textContent = "Tocá Actualizar para reintentar";
-      } else {
-        sub.textContent = "Cargando pagos...";
-        pendSub.textContent = "-";
-      }
-      return;
-    }
+    const { error } = await sb.auth.signInWithPassword({ email, password });
     btn.disabled = false;
+    btn.textContent = "Ingresar";
 
-    const ultimo = getUltimoPago();
-    sub.textContent = ultimo
-      ? `Último pago: ${fmtDateLarga(ultimo.fechaPago)} · ${fmtMoney(ultimo.monto)} (cubre hasta ${fmtDateTimeLarga(ultimo.hasta)})`
-      : "Todavía no hay pagos registrados: se cuentan todas las horas trabajadas.";
-
-    const desde = ultimo ? new Date(ultimo.hasta) : null;
-    const calc = calcularPeriodoPago(desde, new Date());
-    big.textContent = `${fmtHoursMin(calc.horas)} h`;
-    pendSub.textContent = `${calc.sesiones.length} turno(s) completo(s)` + (calc.enCurso ? " · hay un turno en curso (no incluido)" : "");
-
-    count.textContent = String(pagosServidor.length);
-    if(!pagosServidor.length){
-      lista.innerHTML = `<div class="pay-empty">Todavía no registraste ningún pago.</div>`;
-      return;
+    if(error){
+      errBox.textContent = "Credenciales incorrectas o usuario inexistente.";
+      errBox.classList.remove("hidden");
     }
-    lista.innerHTML = [...pagosServidor]
-      .sort((a,b) => new Date(b.fechaPago) - new Date(a.fechaPago))
-      .map(p => `
-        <div class="pay-item">
-          <div>
-            <div class="pay-item-title">${fmtDateLarga(p.fechaPago)} · <b>${fmtMoney(p.monto)}</b></div>
-            <div class="pay-item-sub">${fmtHoursMin(p.horas)} h × ${fmtMoney(p.tarifa)}<br>${periodoTexto(p)}</div>
-            ${p.notas ? `<div class="pay-item-note">${esc(p.notas)}</div>` : ""}
-          </div>
-          <div class="pay-item-actions">
-            <button class="icon-btn" data-act="print" data-id="${esc(p.id)}" title="Imprimir resumen">🖨️</button>
-            <button class="icon-btn" data-act="pdf" data-id="${esc(p.id)}" title="Descargar PDF">🧾</button>
-            <button class="icon-btn" data-act="del" data-id="${esc(p.id)}" title="Eliminar pago">🗑️</button>
-          </div>
-        </div>`).join("");
-  }
+  });
 
-  function renderWeeks(){
-    const container = document.getElementById("weeksContainer");
+  document.getElementById("btnLogout").addEventListener("click", async () => {
+    await sb.auth.signOut();
+  });
 
-    if(!historialCargado && actualizandoHistorial){
-      container.innerHTML = `<div class="skeleton">Cargando semanas...</div>`;
-      return;
-    }
-    if(!historialCargado && historialError){
-      container.innerHTML = `<div class="empty-state"><span class="icon">📡</span>No se pudo conectar con la hoja de cálculo.<br>Probá "Actualizar" cuando tengas conexión.</div>`;
-      return;
-    }
+  document.getElementById("selectEmpleado").addEventListener("change", async (ev) => {
+    selectedEmpleadoId = ev.target.value;
+    estadoServidor = { cargado: false, error: false, tipo: null, timestamp: null };
+    historialServidor = [];
+    pagosServidor = [];
+    render();
+    await recargarTodoEmpleado();
+  });
 
-    const combinadas = getMarcasCombinadas();
-    const sesiones = buildSesiones(combinadas);
-    const grupos = buildGruposSemanales(sesiones);
-
-    if(grupos.length === 0){
-      container.innerHTML = `<div class="empty-state"><span class="icon">&#128203;</span>Todavía no hay marcas registradas.<br>Marcá tu ingreso para comenzar.</div>`;
-      return;
-    }
-
-    const { start: inicioSemanaActual } = getWeekRange(new Date());
-    const keyActual = dateOnlyISO(inicioSemanaActual);
-
-    const abiertosPrevios = new Set(
-      [...container.querySelectorAll("details.week-details[open]")].map(d => d.dataset.key)
-    );
-
-    container.innerHTML = "";
-    grupos.forEach(g => {
-      const key = dateOnlyISO(g.start);
-      const esActual = key === keyActual;
-
-      const details = document.createElement("details");
-      details.className = "week-details";
-      details.dataset.key = key;
-      details.open = abiertosPrevios.size > 0 ? abiertosPrevios.has(key) : esActual;
-
-      const summary = document.createElement("summary");
-      summary.innerHTML = `
-        <span class="week-summary-left">
-          <span>${fmtDateShort(g.start)} — ${fmtDateShort(g.end)}</span>
-          <span class="week-tag">${esActual ? "Semana actual" : "Semana anterior"}</span>
-        </span>
-        <span class="week-total-badge">${fmtHoursMin(g.totalHoras)} h</span>
-      `;
-      details.appendChild(summary);
-
-      const sesionesDiv = document.createElement("div");
-      sesionesDiv.className = "week-sessions";
-
-      const sesionesOrdenadas = [...g.sesiones].sort((a,b) =>
-        new Date(b.entradaRaw || b.salidaRaw) - new Date(a.entradaRaw || a.salidaRaw)
-      );
-
-      sesionesOrdenadas.forEach(s => {
-        const ref = s.entradaRaw || s.salidaRaw;
-        const refDate = new Date(ref);
-        const dayName = DIAS[refDate.getDay()];
-
-        const entradaFechaISO = s.entradaRaw ? dateOnlyISO(s.entradaRaw) : null;
-        const salidaFechaISO = s.salidaRaw ? dateOnlyISO(s.salidaRaw) : null;
-
-        const entradaHtml = s.entradaRounded
-          ? `<span class="time-chip">${fmtTime(s.entradaRounded)}${botonEditar(
-              s.entradaId, s.entradaSynced, "Ingreso", entradaFechaISO,
-              fmtTime(s.entradaRounded), `${dayName}, ${fmtDateShort(refDate)}`, s.salidaRaw
-            )}</span>`
-          : `<span class="pending">sin ingreso</span>`;
-
-        const salidaHtml = s.salidaRounded
-          ? `<span class="time-chip">${fmtTime(s.salidaRounded)}${botonEditar(
-              s.salidaId, s.salidaSynced, "Egreso", salidaFechaISO,
-              fmtTime(s.salidaRounded), `${DIAS[new Date(s.salidaRaw).getDay()]}, ${fmtDateShort(s.salidaRaw)}`, s.entradaRaw
-            )}</span>`
-          : `<span class="pending">en curso</span>`;
-
-        const horasHtml = (s.entradaRounded && s.salidaRounded)
-          ? fmtHoursMin(hoursDecimal(new Date(s.entradaRounded).getTime(), new Date(s.salidaRounded).getTime()))
-          : "—";
-
-        const entradaPendiente = s.entradaRounded ? s.entradaSynced === false : false;
-        const salidaPendiente = s.salidaRounded ? s.salidaSynced === false : false;
-        const syncHtml = (entradaPendiente || salidaPendiente)
-          ? `<span class="sync-tag pending">⏳ Pendiente</span>`
-          : `<span class="sync-tag synced">☁️ Nube</span>`;
-
-        const item = document.createElement("div");
-        item.className = "history-item";
-        item.innerHTML = `
-          <div class="hist-left">
-            <span class="hist-day">${dayName}</span>
-            <span class="hist-date">${fmtDateShort(refDate)}</span>
-            <span class="hist-times">${entradaHtml}<span class="sep">→</span>${salidaHtml}</span>
-          </div>
-          <div class="hist-right">
-            <div class="hist-hours">${horasHtml}</div>
-            ${syncHtml}
-          </div>
-        `;
-        sesionesDiv.appendChild(item);
-      });
-
-      details.appendChild(sesionesDiv);
-      container.appendChild(details);
-    });
-
-    container.querySelectorAll(".edit-btn").forEach(btn => {
-      btn.addEventListener("click", (ev) => {
-        ev.preventDefault();
-        const ds = btn.dataset;
-        abrirModalEdicion(ds.id, ds.origen, ds.tipo, ds.fechaiso, ds.hora, ds.fechalabel, ds.contraparte || null);
+  // Tabs
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      const target = btn.dataset.tab;
+      ["fichar", "historial", "pagos"].forEach(t => {
+        document.getElementById("tab-" + t).classList.toggle("hidden", t !== target);
       });
     });
-  }
+  });
 
-  function botonEditar(id, synced, tipoLabel, fechaISO, horaActual, fechaLabel, contraparteRaw){
-    if(!id) return "";
-    const origen = synced === false ? "local" : "servidor";
-    return `<button class="edit-btn" data-id="${esc(id)}" data-origen="${origen}" data-tipo="${tipoLabel}"
-      data-fechaiso="${fechaISO}" data-hora="${horaActual}" data-fechalabel="${fechaLabel}"
-      data-contraparte="${contraparteRaw || ""}" title="Editar fecha y hora">✏️</button>`;
-  }
+  // Fichar
+  document.getElementById("btnIngreso").addEventListener("click", () => registrarMarca("INGRESO"));
+  document.getElementById("btnEgreso").addEventListener("click", () => registrarMarca("EGRESO"));
 
-  function render(){
-    renderConnBadge();
-    renderEstadoBox();
-    renderBotones();
-    renderStatusRow();
-    renderFuenteNube();
-    renderConflictBanner();
-    renderPagos();
-    renderWeeks();
-    actualizarPreviewReporte();
-    actualizarPreviewPagos();
-
-    const btn = document.getElementById("btnRefreshHist");
-    if(actualizandoHistorial) btn.classList.add("spinning"); else btn.classList.remove("spinning");
-  }
-
-  function tickClock(){
-    const now = new Date();
-    document.getElementById("clock").textContent =
-      `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}:${String(now.getSeconds()).padStart(2,"0")}`;
-    const dayName = DIAS[now.getDay()];
-    document.getElementById("clockDate").textContent = `${dayName}, ${now.getDate()} de ${now.toLocaleString('es-ES', { month: 'long' })}`;
-  }
-
-  let toastTimer = null;
-  function showToast(msg, type){
-    const toast = document.getElementById("toast");
-    toast.textContent = msg;
-    toast.className = "toast show" + (type ? (" " + type) : "");
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove("show"), 3400);
-  }
-
-  // Selector de rango reutilizable (un grupo de chips + fechas personalizadas)
-  function initChips(groupId, customId, idDesde, idHasta, onChange){
-    const chips = document.querySelectorAll(`#${groupId} .range-chip`);
-    chips.forEach(chip => {
-      chip.addEventListener("click", () => {
-        chips.forEach(c => c.classList.remove("active"));
-        chip.classList.add("active");
-        const tipo = chip.dataset.range;
-        document.getElementById(customId).style.display = tipo === "personalizado" ? "grid" : "none";
-        if(tipo === "personalizado"){
-          const hoyISO = dateOnlyISO(new Date());
-          if(!document.getElementById(idDesde).value) document.getElementById(idDesde).value = hoyISO;
-          if(!document.getElementById(idHasta).value) document.getElementById(idHasta).value = hoyISO;
-        }
-        onChange(tipo);
-      });
-    });
-    chips[0].classList.add("active");
-    document.getElementById(idDesde).addEventListener("change", () => onChange(null));
-    document.getElementById(idHasta).addEventListener("change", () => onChange(null));
-  }
-
-  // ---------- Init ----------
-  document.getElementById("btnIngreso").addEventListener("click", marcarIngreso);
-  document.getElementById("btnEgreso").addEventListener("click", marcarEgreso);
-  document.getElementById("btnReset").addEventListener("click", resetAll);
-  document.getElementById("btnForceSync").addEventListener("click", () => reintentarPendientes(false));
+  // Historial
   document.getElementById("btnRefreshHist").addEventListener("click", () => actualizarHistorialDesdeServidor(false));
-  document.getElementById("btnRefreshPagos").addEventListener("click", () => actualizarPagosDesdeServidor(false));
-
-  document.getElementById("editModalCancel").addEventListener("click", cerrarModalEdicion);
-  document.getElementById("editModalGuardar").addEventListener("click", guardarEdicion);
-  document.getElementById("editModalOverlay").addEventListener("click", (ev) => {
-    if(ev.target.id === "editModalOverlay" && !modalGuardando) cerrarModalEdicion();
+  document.getElementById("histFilterChips").addEventListener("click", (ev) => {
+    const b = ev.target.closest(".chip");
+    if(!b) return;
+    document.querySelectorAll("#histFilterChips .chip").forEach(c => c.classList.remove("active"));
+    b.classList.add("active");
+    histFiltro = b.dataset.range;
+    renderHistorial();
+  });
+  document.getElementById("historialLista").addEventListener("click", (ev) => {
+    const editBtn = ev.target.closest("button[data-edit]");
+    const delBtn = ev.target.closest("button[data-del]");
+    if(editBtn){
+      const m = historialServidor.find(x => x.id === editBtn.dataset.edit);
+      if(m) abrirModalManual(m);
+    } else if(delBtn){
+      borrarMarca(delBtn.dataset.del);
+    }
   });
 
-  document.getElementById("btnAbrirAgregarManual").addEventListener("click", abrirModalAgregar);
-  document.getElementById("addModalCancel").addEventListener("click", cerrarModalAgregar);
-  document.getElementById("addModalGuardar").addEventListener("click", guardarRegistroManual);
-  document.getElementById("addTipoIngreso").addEventListener("click", () => seleccionarTipoAgregar("Ingreso"));
-  document.getElementById("addTipoEgreso").addEventListener("click", () => seleccionarTipoAgregar("Egreso"));
-  document.getElementById("addModalOverlay").addEventListener("click", (ev) => {
-    if(ev.target.id === "addModalOverlay" && !addModalGuardando) cerrarModalAgregar();
+  // Modal Manual
+  document.getElementById("btnAbrirManual").addEventListener("click", () => abrirModalManual(null));
+  document.getElementById("btnCerrarManual").addEventListener("click", () => {
+    document.getElementById("manualModalOverlay").classList.remove("open");
   });
+  document.getElementById("manualForm").addEventListener("submit", guardarMarcaManual);
 
   // Pagos
-  document.getElementById("btnAbrirPago").addEventListener("click", abrirModalPago);
-  document.getElementById("payCancel").addEventListener("click", cerrarModalPago);
-  document.getElementById("payRegistrar").addEventListener("click", registrarPago);
-  document.getElementById("payPrint").addEventListener("click", imprimirResumenPagoPendiente);
-  document.getElementById("payPDF").addEventListener("click", descargarPdfPagoPendiente);
-  ["payTarifa","payDesde","payHasta"].forEach(id => {
-    document.getElementById(id).addEventListener("input", actualizarPreviewPago);
+  document.getElementById("btnNuevoPago").addEventListener("click", abrirModalPago);
+  document.getElementById("btnCerrarPay").addEventListener("click", () => {
+    document.getElementById("payModalOverlay").classList.remove("open");
   });
-  document.getElementById("payModalOverlay").addEventListener("click", (ev) => {
-    if(ev.target.id === "payModalOverlay" && !payGuardando) cerrarModalPago();
+  ["payHoras", "payTarifa"].forEach(id => {
+    document.getElementById(id).addEventListener("input", () => {
+      const h = Number(document.getElementById("payHoras").value) || 0;
+      const t = Number(document.getElementById("payTarifa").value) || 0;
+      document.getElementById("payMonto").value = (h * t).toFixed(2);
+    });
   });
+  document.getElementById("payForm").addEventListener("submit", guardarPago);
   document.getElementById("pagosLista").addEventListener("click", (ev) => {
-    const b = ev.target.closest("button[data-act]");
-    if(!b) return;
-    const p = pagosServidor.find(x => x.id === b.dataset.id);
-    if(!p) return;
-    if(b.dataset.act === "print") imprimirResumenPago(p);
-    else if(b.dataset.act === "pdf") generarPdfResumenPago(p);
-    else if(b.dataset.act === "del") eliminarPago(p.id);
+    const pdfBtn = ev.target.closest("button[data-pay-pdf]");
+    const delBtn = ev.target.closest("button[data-pay-del]");
+    if(pdfBtn){
+      const p = pagosServidor.find(x => x.id === pdfBtn.dataset.payPdf);
+      if(p) generarPdfReciboPago(p);
+    } else if(delBtn){
+      eliminarPago(delBtn.dataset.payDel);
+    }
   });
 
   // Reportes
-  initChips("reportRangeGroup", "reportCustomDates", "reportDesde", "reportHasta", (tipo) => {
-    if(tipo) rangoReporteSeleccionado = tipo;
+  document.getElementById("reportRangeGroup").addEventListener("click", (ev) => {
+    const b = ev.target.closest(".chip");
+    if(!b) return;
+    document.querySelectorAll("#reportRangeGroup .chip").forEach(c => c.classList.remove("active"));
+    b.classList.add("active");
+    rangoReporteSeleccionado = b.dataset.val;
+    document.getElementById("reportCustomDates").classList.toggle("hidden", rangoReporteSeleccionado !== "custom");
     actualizarPreviewReporte();
   });
-  initChips("rpRangeGroup", "rpCustomDates", "rpDesde", "rpHasta", (tipo) => {
-    if(tipo) rangoPagosSeleccionado = tipo;
-    actualizarPreviewPagos();
+  ["reportDesde", "reportHasta"].forEach(id => {
+    document.getElementById(id).addEventListener("change", actualizarPreviewReporte);
   });
   document.getElementById("btnReportCSV").addEventListener("click", descargarReporteCSV);
   document.getElementById("btnReportPDF").addEventListener("click", descargarReportePDF);
-  document.getElementById("btnRpPrint").addEventListener("click", imprimirReportePagos);
-  document.getElementById("btnRpPDF").addEventListener("click", descargarReportePagosPDF);
 
-  window.addEventListener("online", () => {
-    render();
-    showToast("Conexión recuperada. Verificando estado real...", "warning");
-    actualizarEstadoDesdeServidor(true).then(() => reintentarPendientes(true));
-    actualizarHistorialDesdeServidor(true);
-    actualizarPagosDesdeServidor(true);
-  });
-  window.addEventListener("offline", () => {
-    render();
-    showToast("Sin conexión a internet. No se puede verificar el estado con otros dispositivos.", "warning");
-  });
+  // Red y Auth Listener
+  window.addEventListener("online", () => { render(); recargarTodoEmpleado(); });
+  window.addEventListener("offline", () => { render(); });
 
   tickClock();
   setInterval(tickClock, 1000);
-  render();
 
-  actualizarEstadoDesdeServidor(true).then(() => reintentarPendientes(true));
-  actualizarHistorialDesdeServidor(true);
-  actualizarPagosDesdeServidor(true);
-
-  setInterval(() => actualizarEstadoDesdeServidor(true), POLL_ESTADO_MS);
-  setInterval(() => { actualizarHistorialDesdeServidor(true); actualizarPagosDesdeServidor(true); }, POLL_HISTORIAL_MS);
-  setInterval(() => { render(); }, 60000);
-
+  sb.auth.onAuthStateChange((_event, session) => {
+    inicializarSesion(session);
+  });
 })();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js").catch((err) => {
-      console.warn("No se pudo registrar el Service Worker:", err);
-    });
+    navigator.serviceWorker.register("./sw.js?v=4").catch(() => {});
   });
 }
 </script>
