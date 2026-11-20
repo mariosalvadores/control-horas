@@ -966,7 +966,37 @@
       notas: p.notas || ""
     }));
   }
+  async function actualizarEstadoDesdeServidor(silencioso){
+    try{
+      const data = await consultarEstadoServidor();
+      ultimoEstadoServidor = data && data.tipo ? data : null;
+      servidorVerificado = true;
+      ultimaVerificacionTs = new Date();
+      render();
+    }catch(err){
+      console.warn("No se pudo verificar el estado en el servidor:", err);
+      servidorVerificado = false;
+      render();
+      if(!silencioso) showToast("No se pudo verificar el estado con el servidor.", "warning");
+    }
+  }
 
+  async function actualizarHistorialDesdeServidor(silencioso){
+    actualizandoHistorial = true; render();
+    try{
+      const data = await consultarHistorialServidor();
+      historialServidor = Array.isArray(data) ? data : [];
+      historialCargado = true; historialError = false;
+    }catch(err){
+      console.warn("No se pudo cargar el historial desde el servidor:", err);
+      historialError = true;
+      if(!silencioso) showToast("No se pudo cargar el historial desde Supabase.", "warning");
+    }finally{
+      actualizandoHistorial = false; render();
+    }
+  }
+
+  
   async function reintentarPendientes(silencioso){
     if(!navigator.onLine) return;
     const pendientes = marcas.filter(m => m.synced === false);
