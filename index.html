@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Control de Ingreso y Egreso</title>
@@ -810,105 +811,160 @@
     return Object.values(grupos).sort((a,b) => b.start - a.start);
   }
 
-  // ---------- Comunicación con Apps Script ----------
-  async function postJSON(payload){
-    const res = await fetch(GAS_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(payload)
+  const SUPABASE_URL = "https://wcekgkgoxwdyyxkxbqcb.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_Z28ePmd1g6V9BCEoWV2HsA_4AciiqDS";
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // ---------- Comunicación con Supabase ----------
+  async function enviarMarcaAlServidor(marca){
+    const { data, error } = await sb.rpc("registrar_marca_segura", {
+      p_id: marca.id,
+      p_tipo: marca.tipo,
+      p_timestamp_real: marca.raw,
+      p_timestamp_redondeado: marca.rounded
     });
-    if(!res.ok) throw new Error("HTTP " + res.status);
-    return res.json();
+    if(error) throw error;
+    return data;
   }
 
-  async function enviarMarcaAlServidor(marca){
-    return postJSON({
-      id: marca.id,
-      timestamp: marca.raw,
-      fecha: dateOnlyISO(marca.raw),
-      tipo: marca.tipo,
-      horaOriginal: fmtTimeSec(marca.raw),
-      horaRedondeada: fmtTime(marca.rounded),
-      timestampRedondeado: marca.rounded
-    });
-  }
   async function editarMarcaEnServidor(id, nuevaFecha, horaEditada){
-    return postJSON({ accion: "editar", id, fecha: nuevaFecha, horaEditada });
+    const nuevoRaw = new Date(`${nuevaFecha}T${horaEditada}:00`);
+    const nuevoRounded = roundToNearest15(nuevoRaw);
+
+    const { data, error } = await sb
+      .from("marcas")
+      .update({
+        timestamp_real: nuevoRaw.toISOString(),
+        timestamp_redondeado: nuevoRounded.toISOString()
+      })
+      .eq("id", id)
+      .select("id");
+
+    if(error) throw error;
+    if(!data || data.length === 0) return { status: "error", motivo: "no_encontrado" };
+    return { status: "ok" };
   }
+
   async function agregarMarcaManualEnServidor(fecha, hora, tipo, id, forzar){
-    return postJSON({ accion: "agregarManual", fecha, hora, tipo, id, forzar: !!forzar });
+    const raw = new Date(`${fecha}T${hora}:00`);
+    const rounded = roundToNearest15(raw);
+
+    if(!forzar){
+      const { data: cercanas, error: errBusca } = await sb
+        .from("marcas")
+        .select("id, tipo, timestamp_real, timestamp_redondeado")
+        .order("timestamp_real", { ascending: true });
+
+      if(errBusca) throw errBusca;
+
+      if(cercanas && cercanas.length > 0){
+        const targetMs = raw.getTime();
+        let masCercana = cercanas[0];
+        let minDiff = Math.abs(new Date(masCercana.timestamp_real).getTime() - targetMs);
+
+        for(const m of cercanas){
+          const diff = Math.abs(new Date(m.timestamp_real).getTime() - targetMs);
+          if(diff < minDiff){ minDiff = diff; masCercana = m; }
+        }
+
+        if(masCercana.tipo === tipo){
+          return {
+            status: "warning",
+            contexto: {
+              tipo: masCercana.tipo,
+              timestamp: masCercana.timestamp_real,
+              horaRedondeada: fmtTime(masCercana.timestamp_redondeado)
+            }
+          };
+        }
+      }
+    }
+
+    const { error } = await sb.from("marcas").insert({
+      id,
+      tipo,
+      timestamp_real: raw.toISOString(),
+      timestamp_redondeado: rounded.toISOString()
+    });
+    if(error) throw error;
+    return { status: "ok" };
   }
+
   async function registrarPagoEnServidor(pago){
-    return postJSON({ accion: "registrarPago", ...pago });
+    const { error } = await sb.from("pagos").insert({
+      id: pago.id,
+      fecha_pago: pago.fechaPago,
+      desde: pago.desde || null,
+      hasta: pago.hasta,
+      horas: pago.horas,
+      tarifa: pago.tarifa,
+      monto: pago.monto,
+      notas: pago.notas || ""
+    });
+    if(error) return { status: "error", motivo: error.message };
+    return { status: "ok" };
   }
+
   async function eliminarPagoEnServidor(id){
-    return postJSON({ accion: "eliminarPago", id });
+    const { error } = await sb.from("pagos").delete().eq("id", id);
+    if(error) throw error;
+    return { status: "ok" };
   }
 
   async function consultarEstadoServidor(){
-    const res = await fetch(`${GAS_URL}?action=estado&_=${Date.now()}`, { method:"GET", cache:"no-store" });
-    if(!res.ok) throw new Error("HTTP " + res.status);
-    return res.json();
+    const { data, error } = await sb
+      .from("marcas")
+      .select("tipo, timestamp_real, timestamp_redondeado")
+      .order("timestamp_real", { ascending: false })
+      .limit(1);
+
+    if(error) throw error;
+    if(!data || data.length === 0) return null;
+
+    const u = data[0];
+    return {
+      tipo: u.tipo,
+      timestamp: u.timestamp_real,
+      fecha: dateOnlyISO(u.timestamp_real),
+      horaOriginal: fmtTimeSec(u.timestamp_real),
+      horaRedondeada: fmtTime(u.timestamp_redondeado)
+    };
   }
+
   async function consultarHistorialServidor(){
-    const res = await fetch(`${GAS_URL}?action=historial&_=${Date.now()}`, { method:"GET", cache:"no-store" });
-    if(!res.ok) throw new Error("HTTP " + res.status);
-    return res.json();
+    const { data, error } = await sb
+      .from("marcas")
+      .select("id, tipo, timestamp_real, timestamp_redondeado")
+      .order("timestamp_real", { ascending: true });
+
+    if(error) throw error;
+    return (data || []).map(m => ({
+      id: m.id,
+      tipo: m.tipo,
+      timestamp: m.timestamp_real,
+      fecha: dateOnlyISO(m.timestamp_real),
+      horaRedondeada: fmtTime(m.timestamp_redondeado),
+      timestampRedondeado: m.timestamp_redondeado
+    }));
   }
+
   async function consultarPagosServidor(){
-    const res = await fetch(`${GAS_URL}?action=pagos&_=${Date.now()}`, { method:"GET", cache:"no-store" });
-    if(!res.ok) throw new Error("HTTP " + res.status);
-    return res.json();
-  }
+    const { data, error } = await sb
+      .from("pagos")
+      .select("id, fecha_pago, desde, hasta, horas, tarifa, monto, notas")
+      .order("fecha_pago", { ascending: false });
 
-  async function actualizarEstadoDesdeServidor(silencioso){
-    try{
-      const data = await consultarEstadoServidor();
-      ultimoEstadoServidor = data && data.tipo ? data : null;
-      servidorVerificado = true;
-      ultimaVerificacionTs = new Date();
-      render();
-    }catch(err){
-      console.warn("No se pudo verificar el estado en el servidor:", err);
-      servidorVerificado = false;
-      render();
-      if(!silencioso) showToast("No se pudo verificar el estado con el servidor.", "warning");
-    }
-  }
-
-  async function actualizarHistorialDesdeServidor(silencioso){
-    actualizandoHistorial = true; render();
-    try{
-      const data = await consultarHistorialServidor();
-      historialServidor = Array.isArray(data) ? data : [];
-      historialCargado = true; historialError = false;
-    }catch(err){
-      console.warn("No se pudo cargar el historial desde el servidor:", err);
-      historialError = true;
-      if(!silencioso) showToast("No se pudo cargar el historial desde Google Sheets.", "warning");
-    }finally{
-      actualizandoHistorial = false; render();
-    }
-  }
-
-  async function actualizarPagosDesdeServidor(silencioso){
-    actualizandoPagos = true; render();
-    try{
-      const data = await consultarPagosServidor();
-      if(!Array.isArray(data)) throw new Error("Respuesta inesperada: ¿actualizaste el Apps Script?");
-      pagosServidor = data.map(p => ({
-        id: String(p.id), fechaPago: p.fechaPago || "", desde: p.desde || "", hasta: p.hasta || "",
-        horas: Number(p.horas) || 0, tarifa: Number(p.tarifa) || 0, monto: Number(p.monto) || 0,
-        notas: p.notas || ""
-      }));
-      pagosCargados = true; pagosError = false;
-    }catch(err){
-      console.warn("No se pudieron cargar los pagos:", err);
-      pagosError = true;
-      if(!silencioso) showToast("No se pudieron cargar los pagos. Verificá que el Apps Script esté actualizado.", "warning");
-    }finally{
-      actualizandoPagos = false; render();
-    }
+    if(error) throw error;
+    return (data || []).map(p => ({
+      id: p.id,
+      fechaPago: p.fecha_pago,
+      desde: p.desde || "",
+      hasta: p.hasta,
+      horas: Number(p.horas) || 0,
+      tarifa: Number(p.tarifa) || 0,
+      monto: Number(p.monto) || 0,
+      notas: p.notas || ""
+    }));
   }
 
   async function reintentarPendientes(silencioso){
