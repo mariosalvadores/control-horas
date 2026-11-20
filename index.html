@@ -81,6 +81,7 @@
       color: #93c5fd;
     }
     .role-badge.admin { background: rgba(16,185,129,0.2); color: #6ee7b7; }
+    .role-badge.inactive { background: rgba(239,68,68,0.2); color: #fca5a5; }
 
     /* Employee Selector Bar (Admin) */
     .emp-bar {
@@ -124,6 +125,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 8px;
     }
 
     /* Clock & Status */
@@ -231,12 +233,14 @@
       border: 1px solid var(--border);
       margin-bottom: 14px;
     }
+    .tabs.admin-tabs { grid-template-columns: repeat(4, 1fr); }
     .tab-btn {
       background: transparent;
       color: var(--muted);
-      padding: 9px 6px;
-      font-size: 0.82rem;
+      padding: 9px 4px;
+      font-size: 0.8rem;
       border-radius: 10px;
+      white-space: nowrap;
     }
     .tab-btn.active { background: var(--surface-2); color: var(--text); }
 
@@ -285,7 +289,7 @@
     .badge-out { color: var(--red); font-weight: 700; }
     .marca-actions { display: flex; gap: 6px; }
 
-    /* Pay items */
+    /* Pay & Employee items */
     .pay-item {
       background: var(--bg);
       border: 1px solid var(--border);
@@ -409,10 +413,11 @@
     </div>
 
     <!-- Navegación -->
-    <div class="tabs">
+    <div id="mainTabsBar" class="tabs">
       <button class="tab-btn active" data-tab="fichar">Fichar</button>
       <button class="tab-btn" data-tab="historial">Historial</button>
       <button class="tab-btn" data-tab="pagos" id="tabBtnPagos">Pagos y Reportes</button>
+      <button class="tab-btn hidden" data-tab="empleados" id="tabBtnEmpleados">Empleados</button>
     </div>
 
     <!-- TAB 1: FICHAR -->
@@ -550,6 +555,17 @@
         </div>
       </div>
     </section>
+
+    <!-- TAB 4: EMPLEADOS (EXCLUSIVO ADMIN) -->
+    <section id="tab-empleados" class="hidden">
+      <div class="card">
+        <div class="card-title">
+          <span>Gestión de Personal</span>
+          <button id="btnNuevoEmpleado" class="btn-primary btn-sm" style="width:auto;">+ Nuevo Empleado</button>
+        </div>
+        <div id="empleadosAdminLista"></div>
+      </div>
+    </section>
   </div>
 
   <!-- MODAL MARCA MANUAL / EDICIÓN (ADMIN) -->
@@ -624,6 +640,52 @@
     </div>
   </div>
 
+  <!-- MODAL NUEVO / EDITAR EMPLEADO (ADMIN) -->
+  <div id="empModalOverlay" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="empModalTitle">Nuevo Empleado</h3>
+        <button id="btnCerrarEmpModal" class="btn-secondary btn-sm">✕</button>
+      </div>
+      <form id="empForm">
+        <input type="hidden" id="empEditId" />
+        <div class="field">
+          <label for="empNombre">Nombre y Apellido</label>
+          <input type="text" id="empNombre" required placeholder="Ej: Juan Pérez" />
+        </div>
+        <div class="field" id="empEmailWrap">
+          <label for="empEmail">Correo electrónico (usuario de ingreso)</label>
+          <input type="email" id="empEmail" required placeholder="juan@floreriasanjorge.com" />
+        </div>
+        <div class="field" id="empPassWrap">
+          <label for="empPassword">Contraseña inicial (mínimo 6 caracteres)</label>
+          <input type="password" id="empPassword" minlength="6" placeholder="••••••••" />
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label for="empTarifa">Valor por hora ($)</label>
+            <input type="number" step="0.01" min="0" id="empTarifa" value="0" required />
+          </div>
+          <div class="field">
+            <label for="empRol">Rol</label>
+            <select id="empRol">
+              <option value="empleado">Empleado</option>
+              <option value="admin">Administrador</option>
+            </select>
+          </div>
+        </div>
+        <div class="field" id="empActivoWrap">
+          <label for="empActivo">Estado de la cuenta</label>
+          <select id="empActivo">
+            <option value="true">Activo (puede ingresar y fichar)</option>
+            <option value="false">Inactivo (suspendido)</option>
+          </select>
+        </div>
+        <button type="submit" id="btnGuardarEmp" class="btn-primary">Guardar</button>
+      </form>
+    </div>
+  </div>
+
   <div id="toast" class="toast"></div>
 
 <script>
@@ -633,10 +695,21 @@
   const SUPABASE_ANON_KEY = "sb_publishable_Z28ePmd1g6V9BCEoWV2HsA_4AciiqDS";
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+  // Cliente secundario aislado (sin persistencia de sesión) para crear usuarios sin cerrar la sesión del Admin
+  const sbSignupClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      storageKey: "sb-signup-isolated"
+    }
+  });
+
   // Estado de sesión y multi-empleado
   let currentUser = null;
   let currentPerfil = null;
-  let listaEmpleados = [];
+  let listaEmpleados = [];       // Solo activos (para el selector superior)
+  let todosLosPerfiles = [];     // Activos e inactivos (para la ficha de administración)
   let selectedEmpleadoId = null;
 
   // Configuración GPS del establecimiento (San Luis 529, Salta por defecto)
@@ -708,7 +781,6 @@
     return dt;
   }
 
-  // Cálculo de distancia Haversine en metros
   function calcularDistanciaMetros(lat1, lon1, lat2, lon2){
     const R = 6371000;
     const toRad = (deg) => deg * Math.PI / 180;
@@ -727,12 +799,12 @@
     el.textContent = msg;
     el.className = "toast show " + type;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { el.className = "toast"; }, 3400);
+    toastTimer = setTimeout(() => { el.className = "toast"; }, 3500);
   }
 
   function esAdmin(){ return currentPerfil && currentPerfil.rol === "admin"; }
   function getEmpleadoActivo(){
-    return listaEmpleados.find(e => e.id === selectedEmpleadoId) || currentPerfil;
+    return todosLosPerfiles.find(e => e.id === selectedEmpleadoId) || currentPerfil;
   }
 
   // ================= GPS Y GEOCERCA =================
@@ -857,12 +929,42 @@
     }
   }
 
-  // ================= AUTENTICACIÓN Y PERFILES =================
+  // ================= AUTENTICACIÓN Y GESTIÓN DE EMPLEADOS =================
+  async function cargarListaPerfiles(){
+    if(esAdmin()){
+      const { data: emps } = await sb
+        .from("perfiles")
+        .select("*")
+        .order("nombre", { ascending: true });
+      todosLosPerfiles = emps && emps.length ? emps : [currentPerfil];
+      listaEmpleados = todosLosPerfiles.filter(e => e.activo !== false);
+      if(!listaEmpleados.length) listaEmpleados = [currentPerfil];
+
+      if(!selectedEmpleadoId || !listaEmpleados.some(e => e.id === selectedEmpleadoId)){
+        const primerEmp = listaEmpleados.find(e => e.rol === "empleado") || listaEmpleados[0];
+        selectedEmpleadoId = primerEmp.id;
+      }
+
+      const sel = document.getElementById("selectEmpleado");
+      sel.innerHTML = listaEmpleados.map(e =>
+        `<option value="${e.id}">${e.nombre} (${e.rol === "admin" ? "Admin" : "Empleado"})</option>`
+      ).join("");
+      sel.value = selectedEmpleadoId;
+
+      renderEmpleadosAdmin();
+    } else {
+      todosLosPerfiles = [currentPerfil];
+      listaEmpleados = [currentPerfil];
+      selectedEmpleadoId = currentPerfil.id;
+    }
+  }
+
   async function inicializarSesion(session){
     if(!session || !session.user){
       currentUser = null;
       currentPerfil = null;
       listaEmpleados = [];
+      todosLosPerfiles = [];
       selectedEmpleadoId = null;
       document.getElementById("authScreen").classList.remove("hidden");
       document.getElementById("appScreen").classList.add("hidden");
@@ -882,6 +984,12 @@
       return;
     }
 
+    if(perfil.activo === false){
+      showToast("Tu cuenta se encuentra desactivada. Contactá al administrador.", "error");
+      await sb.auth.signOut();
+      return;
+    }
+
     currentPerfil = perfil;
     document.getElementById("currentUserName").textContent = perfil.nombre;
     const roleBadge = document.getElementById("currentUserRole");
@@ -889,33 +997,21 @@
     roleBadge.className = "role-badge " + (perfil.rol === "admin" ? "admin" : "");
 
     await cargarConfiguracionLocal();
+    await cargarListaPerfiles();
 
+    const tabsBar = document.getElementById("mainTabsBar");
     if(perfil.rol === "admin"){
-      const { data: emps } = await sb
-        .from("perfiles")
-        .select("*")
-        .eq("activo", true)
-        .order("nombre", { ascending: true });
-      listaEmpleados = emps && emps.length ? emps : [perfil];
-
-      const primerEmp = listaEmpleados.find(e => e.rol === "empleado") || listaEmpleados[0];
-      selectedEmpleadoId = primerEmp.id;
-
-      const sel = document.getElementById("selectEmpleado");
-      sel.innerHTML = listaEmpleados.map(e =>
-        `<option value="${e.id}">${e.nombre} (${e.rol === "admin" ? "Admin" : "Empleado"})</option>`
-      ).join("");
-      sel.value = selectedEmpleadoId;
-
+      tabsBar.classList.add("admin-tabs");
+      document.getElementById("tabBtnEmpleados").classList.remove("hidden");
       document.getElementById("adminEmpBar").classList.remove("hidden");
       document.getElementById("adminManualBtnWrap").classList.remove("hidden");
       document.getElementById("adminGpsConfigCard").classList.remove("hidden");
       document.getElementById("btnNuevoPago").classList.remove("hidden");
       document.getElementById("adminReportCard").classList.remove("hidden");
-      document.getElementById("tabBtnPagos").textContent = "Pagos y Reportes";
+      document.getElementById("tabBtnPagos").textContent = "Pagos";
     } else {
-      listaEmpleados = [perfil];
-      selectedEmpleadoId = perfil.id;
+      tabsBar.classList.remove("admin-tabs");
+      document.getElementById("tabBtnEmpleados").classList.add("hidden");
       document.getElementById("adminEmpBar").classList.add("hidden");
       document.getElementById("adminManualBtnWrap").classList.add("hidden");
       document.getElementById("adminGpsConfigCard").classList.add("hidden");
@@ -929,6 +1025,137 @@
 
     verificarUbicacionGPS(true);
     await recargarTodoEmpleado();
+  }
+
+  function renderEmpleadosAdmin(){
+    if(!esAdmin()) return;
+    const cont = document.getElementById("empleadosAdminLista");
+    if(!todosLosPerfiles.length){
+      cont.innerHTML = `<div class="empty-msg">No hay empleados registrados.</div>`;
+      return;
+    }
+
+    cont.innerHTML = todosLosPerfiles.map(e => {
+      const esCuentaActiva = e.activo !== false;
+      return `
+        <div class="pay-item">
+          <div class="pay-top">
+            <div>
+              <div style="font-weight:700;font-size:0.95rem;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                <span>${e.nombre}</span>
+                <span class="role-badge ${e.rol === "admin" ? "admin" : ""}">${e.rol === "admin" ? "Admin" : "Empleado"}</span>
+                ${!esCuentaActiva ? `<span class="role-badge inactive">Inactivo</span>` : ""}
+              </div>
+              <div class="pay-meta">${e.email}</div>
+              <div class="pay-meta">Valor hora habitual: <strong>${formatMoney(e.valor_hora_default || 0)}</strong></div>
+            </div>
+          </div>
+          <div class="pay-actions">
+            <button class="btn-secondary btn-sm" data-emp-edit="${e.id}">Editar datos</button>
+            <button class="btn-secondary btn-sm" data-emp-select="${e.id}">Ver jornada</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function abrirModalEmpleado(emp = null){
+    if(!esAdmin()) return;
+    const isEdit = Boolean(emp);
+    document.getElementById("empModalTitle").textContent = isEdit ? "Editar Empleado" : "Registrar Nuevo Empleado";
+    document.getElementById("empEditId").value = isEdit ? emp.id : "";
+    document.getElementById("empNombre").value = isEdit ? emp.nombre : "";
+    document.getElementById("empEmail").value = isEdit ? emp.email : "";
+    document.getElementById("empEmail").disabled = isEdit;
+    document.getElementById("empPassWrap").classList.toggle("hidden", isEdit);
+    document.getElementById("empPassword").required = !isEdit;
+    document.getElementById("empPassword").value = "";
+    document.getElementById("empTarifa").value = isEdit ? (emp.valor_hora_default || 0) : 0;
+    document.getElementById("empRol").value = isEdit ? emp.rol : "empleado";
+    document.getElementById("empActivo").value = isEdit ? String(emp.activo !== false) : "true";
+    document.getElementById("empActivoWrap").classList.toggle("hidden", !isEdit);
+    document.getElementById("empModalOverlay").classList.add("open");
+  }
+
+  async function guardarEmpleado(ev){
+    ev.preventDefault();
+    if(!esAdmin()) return;
+    const btn = document.getElementById("btnGuardarEmp");
+    const editId = document.getElementById("empEditId").value;
+    const nombre = document.getElementById("empNombre").value.trim();
+    const email = document.getElementById("empEmail").value.trim().toLowerCase();
+    const password = document.getElementById("empPassword").value;
+    const tarifa = Number(document.getElementById("empTarifa").value) || 0;
+    const rol = document.getElementById("empRol").value;
+    const activo = document.getElementById("empActivo").value === "true";
+
+    if(!nombre){
+      showToast("Ingresá el nombre del empleado.", "warning");
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Guardando...";
+
+    try{
+      if(editId){
+        // Actualizar perfil existente
+        const { error } = await sb
+          .from("perfiles")
+          .update({
+            nombre,
+            rol,
+            valor_hora_default: tarifa,
+            activo
+          })
+          .eq("id", editId);
+        if(error) throw error;
+        showToast("Datos del empleado actualizados.", "success");
+      } else {
+        // Registrar nuevo usuario en Supabase Auth usando cliente aislado (no cierra sesión del Admin)
+        if(!email || password.length < 6){
+          throw new Error("Ingresá un correo válido y una contraseña de al menos 6 caracteres.");
+        }
+        const { data: signUpData, error: signUpErr } = await sbSignupClient.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { nombre, rol }
+          }
+        });
+        if(signUpErr) throw signUpErr;
+        if(!signUpData || !signUpData.user){
+          throw new Error("No se pudo crear el usuario en autenticación.");
+        }
+
+        // Asegurar creación/actualización en tabla perfiles con su tarifa por hora
+        const { error: upsertErr } = await sb
+          .from("perfiles")
+          .upsert({
+            id: signUpData.user.id,
+            nombre,
+            email,
+            rol,
+            valor_hora_default: tarifa,
+            activo: true
+          });
+        if(upsertErr) throw upsertErr;
+
+        showToast(`Empleado ${nombre} registrado correctamente.`, "success");
+      }
+
+      document.getElementById("empModalOverlay").classList.remove("open");
+      await cargarListaPerfiles();
+      await recargarTodoEmpleado();
+    }catch(err){
+      console.error(err);
+      let msg = err.message || "No se pudo guardar el empleado.";
+      if(msg.includes("User already registered")) msg = "Ese correo electrónico ya está registrado.";
+      showToast(msg, "error");
+    }finally{
+      btn.disabled = false;
+      btn.textContent = "Guardar";
+    }
   }
 
   async function recargarTodoEmpleado(){
@@ -1030,7 +1257,6 @@
     render();
 
     try{
-      // Revalidar GPS en el momento exacto de fichar
       const gpsActual = await verificarUbicacionGPS(true);
       if(!esAdmin() && !gpsActual.ok){
         showToast(gpsActual.errorMsg || "Debés estar dentro del establecimiento para fichar.", "error");
@@ -1130,7 +1356,6 @@
     const btnIn = document.getElementById("btnIngreso");
     const btnOut = document.getElementById("btnEgreso");
 
-    // El empleado solo puede fichar si su GPS está dentro del establecimiento
     const habilitadoPorGps = esAdmin() || gpsState.ok;
 
     if(!estadoServidor.cargado){
@@ -1155,7 +1380,6 @@
       btnOut.disabled = true;
     }
 
-    // Resumen semana actual
     const hoyStr = toLocalDateStr(new Date());
     const lunesSemana = startOfWeekMonday(new Date());
     const sesiones = calcularJornadas(historialServidor);
@@ -1245,7 +1469,6 @@
       return;
     }
 
-    // El empleado solo consulta sus pagos; NO tiene botones de imprimir/descargar PDF ni eliminar
     cont.innerHTML = pagosServidor.map(p => `
       <div class="pay-item">
         <div class="pay-top">
@@ -1574,15 +1797,18 @@
   });
 
   // Tabs
-  document.querySelectorAll(".tab-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      const target = btn.dataset.tab;
-      ["fichar", "historial", "pagos"].forEach(t => {
-        document.getElementById("tab-" + t).classList.toggle("hidden", t !== target);
-      });
+  function activarTab(target){
+    document.querySelectorAll(".tab-btn").forEach(b => {
+      b.classList.toggle("active", b.dataset.tab === target);
     });
+    ["fichar", "historial", "pagos", "empleados"].forEach(t => {
+      const el = document.getElementById("tab-" + t);
+      if(el) el.classList.toggle("hidden", t !== target);
+    });
+  }
+
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => activarTab(btn.dataset.tab));
   });
 
   // GPS y Fichar
@@ -1644,6 +1870,30 @@
     }
   });
 
+  // Empleados (Admin)
+  document.getElementById("btnNuevoEmpleado").addEventListener("click", () => abrirModalEmpleado(null));
+  document.getElementById("btnCerrarEmpModal").addEventListener("click", () => {
+    document.getElementById("empModalOverlay").classList.remove("open");
+  });
+  document.getElementById("empForm").addEventListener("submit", guardarEmpleado);
+  document.getElementById("empleadosAdminLista").addEventListener("click", async (ev) => {
+    const editBtn = ev.target.closest("button[data-emp-edit]");
+    const selBtn = ev.target.closest("button[data-emp-select]");
+    if(editBtn){
+      const emp = todosLosPerfiles.find(x => x.id === editBtn.dataset.empEdit);
+      if(emp) abrirModalEmpleado(emp);
+    } else if(selBtn){
+      const id = selBtn.dataset.empSelect;
+      const sel = document.getElementById("selectEmpleado");
+      if(sel && [...sel.options].some(o => o.value === id)){
+        sel.value = id;
+      }
+      selectedEmpleadoId = id;
+      activarTab("fichar");
+      await recargarTodoEmpleado();
+    }
+  });
+
   // Reportes
   document.getElementById("reportRangeGroup").addEventListener("click", (ev) => {
     const b = ev.target.closest(".chip");
@@ -1674,7 +1924,7 @@
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js?v=5").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=6").catch(() => {});
   });
 }
 </script>
