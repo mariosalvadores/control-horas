@@ -996,6 +996,25 @@
     }
   }
 
+  async function actualizarPagosDesdeServidor(silencioso){
+    actualizandoPagos = true; render();
+    try{
+      const data = await consultarPagosServidor();
+      if(!Array.isArray(data)) throw new Error("Respuesta inesperada de pagos");
+      pagosServidor = data.map(p => ({
+        id: String(p.id), fechaPago: p.fechaPago || "", desde: p.desde || "", hasta: p.hasta,
+        horas: Number(p.horas) || 0, tarifa: Number(p.tarifa) || 0, monto: Number(p.monto) || 0,
+        notas: p.notas || ""
+      }));
+      pagosCargados = true; pagosError = false;
+    }catch(err){
+      console.warn("No se pudieron cargar los pagos:", err);
+      pagosError = true;
+      if(!silencioso) showToast("No se pudieron cargar los pagos desde Supabase.", "warning");
+    }finally{
+      actualizandoPagos = false; render();
+    }
+  }
   
   async function reintentarPendientes(silencioso){
     if(!navigator.onLine) return;
