@@ -147,7 +147,7 @@
     .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
     .dot.in { background: var(--green); box-shadow: 0 0 8px var(--green); }
     .dot.out { background: var(--red); }
-    .status-sub { font-size: 0.78rem; color: var(--muted); margin-top: 6px; }
+    .status-sub { font-size: 0.82rem; color: var(--muted); margin-top: 8px; font-variant-numeric: tabular-nums; }
 
     /* GPS Box */
     .gps-box {
@@ -301,6 +301,24 @@
     .pay-amount { font-size: 1.1rem; font-weight: 800; color: var(--green); }
     .pay-meta { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
     .pay-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+
+    .pay-detail-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 12px;
+      max-height: 165px;
+      overflow-y: auto;
+      font-size: 0.78rem;
+    }
+    .pay-detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(51,65,85,0.4);
+    }
+    .pay-detail-row:last-child { border-bottom: none; }
 
     /* Modal */
     .modal-overlay {
@@ -609,7 +627,7 @@
       <form id="payForm">
         <div class="row-2">
           <div class="field">
-            <label>Desde (opcional)</label>
+            <label>Desde (posterior al último pago)</label>
             <input type="date" id="payDesde" />
           </div>
           <div class="field">
@@ -617,6 +635,7 @@
             <input type="date" id="payHasta" required />
           </div>
         </div>
+        <div id="payPreviewDias" class="pay-detail-box"></div>
         <div class="row-2">
           <div class="field">
             <label>Horas a liquidar</label>
@@ -691,6 +710,7 @@
 <script>
 (function(){
   const NEGOCIO_NOMBRE = "Floreria San Jorge";
+  const ZONA_HORARIA_AR = "America/Argentina/Buenos_Aires";
   const SUPABASE_URL = "https://wcekgkgoxwdyyxkxbqcb.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_Z28ePmd1g6V9BCEoWV2HsA_4AciiqDS";
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -738,26 +758,75 @@
   let histFiltro = "semana";
   let rangoReporteSeleccionado = "semana";
 
-  // Utilidades de fecha y formato
+  // ================= UTILIDADES DE FECHA Y HORARIO ARGENTINA (dd/mm/aa hh:mm) =================
   function pad2(n){ return String(n).padStart(2, "0"); }
+
+  function getPartsAR(isoOrDate){
+    const d = isoOrDate instanceof Date ? isoOrDate : new Date(isoOrDate);
+    if(isNaN(d)) return null;
+    const fmt = new Intl.DateTimeFormat("en-GB", {
+      timeZone: ZONA_HORARIA_AR,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false
+    });
+    const parts = {};
+    for(const p of fmt.formatToParts(d)){
+      if(p.type !== "literal") parts[p.type] = p.value;
+    }
+    if(parts.hour === "24") parts.hour = "00";
+    return parts;
+  }
+
+  // Fecha interna YYYY-MM-DD en horario Argentina
   function toLocalDateStr(d){
-    const dt = d instanceof Date ? d : new Date(d);
-    return `${dt.getFullYear()}-${pad2(dt.getMonth()+1)}-${pad2(dt.getDate())}`;
+    const p = getPartsAR(d);
+    if(!p) return "";
+    return `${p.year}-${p.month}-${p.day}`;
   }
+
+  // Hora interna HH:mm en horario Argentina
   function toLocalTimeStr(d){
-    const dt = d instanceof Date ? d : new Date(d);
-    return `${pad2(dt.getHours())}:${pad2(dt.getMinutes())}`;
+    const p = getPartsAR(d);
+    if(!p) return "";
+    return `${p.hour}:${p.minute}`;
   }
+
+  // Formato visual dd/mm/aa
   function formatFechaAR(isoOrDate){
-    const d = isoOrDate instanceof Date ? isoOrDate : new Date(isoOrDate);
-    if(isNaN(d)) return "-";
-    return d.toLocaleDateString("es-AR", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" });
+    if(typeof isoOrDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(isoOrDate)){
+      const [y, m, day] = isoOrDate.split("-");
+      return `${day}/${m}/${y.slice(-2)}`;
+    }
+    const p = getPartsAR(isoOrDate);
+    if(!p) return "-";
+    return `${p.day}/${p.month}/${p.year.slice(-2)}`;
   }
+
+  // Formato visual hh:mm (24 hs)
   function formatHoraAR(isoOrDate){
-    const d = isoOrDate instanceof Date ? isoOrDate : new Date(isoOrDate);
-    if(isNaN(d)) return "--:--";
-    return d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false });
+    const p = getPartsAR(isoOrDate);
+    if(!p) return "--:--";
+    return `${p.hour}:${p.minute}`;
   }
+
+  // Formato completo dd/mm/aa hh:mm (Hora Argentina)
+  function formatFechaHoraAR(isoOrDate){
+    const p = getPartsAR(isoOrDate);
+    if(!p) return "-";
+    return `${p.day}/${p.month}/${p.year.slice(-2)} ${p.hour}:${p.minute}`;
+  }
+
+  function addDaysStr(yyyyMmDd, days){
+    const [y, m, d] = yyyyMmDd.split("-").map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d + days, 12, 0, 0));
+    return `${dt.getUTCFullYear()}-${pad2(dt.getUTCMonth() + 1)}-${pad2(dt.getUTCDate())}`;
+  }
+
   function formatDuracion(ms){
     const mins = Math.max(0, Math.round(ms / 60000));
     const h = Math.floor(mins / 60);
@@ -1099,7 +1168,6 @@
 
     try{
       if(editId){
-        // Actualizar perfil existente
         const { error } = await sb
           .from("perfiles")
           .update({
@@ -1112,7 +1180,6 @@
         if(error) throw error;
         showToast("Datos del empleado actualizados.", "success");
       } else {
-        // Registrar nuevo usuario en Supabase Auth usando cliente aislado (no cierra sesión del Admin)
         if(!email || password.length < 6){
           throw new Error("Ingresá un correo válido y una contraseña de al menos 6 caracteres.");
         }
@@ -1128,7 +1195,6 @@
           throw new Error("No se pudo crear el usuario en autenticación.");
         }
 
-        // Asegurar creación/actualización en tabla perfiles con su tarifa por hora
         const { error: upsertErr } = await sb
           .from("perfiles")
           .upsert({
@@ -1291,7 +1357,7 @@
         else if(data.motivo === "fuera_de_rango") msgRechazo = "Ubicación fuera del establecimiento.";
         showToast(msgRechazo, "warning");
       } else {
-        showToast(`${tipo} registrado (${formatHoraAR(redondeada)})`, "success");
+        showToast(`${tipo} registrado: ${formatFechaHoraAR(redondeada)} hs`, "success");
       }
       await Promise.all([
         actualizarEstadoDesdeServidor(true),
@@ -1306,7 +1372,7 @@
     }
   }
 
-  // ================= CÁLCULO DE HORAS =================
+  // ================= CÁLCULO DE HORAS Y DETALLE POR DÍA =================
   function calcularJornadas(marcas){
     const ordenadas = [...marcas].sort((a,b) => new Date(a.timestampRedondeado) - new Date(b.timestampRedondeado));
     const sesiones = [];
@@ -1332,21 +1398,42 @@
     return sesiones;
   }
 
+  // Agrupa sesiones por día (fecha YYYY-MM-DD) devolviendo cantidad de horas trabajadas en cada día
+  function agruparHorasPorDia(sesiones){
+    const mapa = {};
+    for(const s of sesiones){
+      if(!mapa[s.fecha]){
+        mapa[s.fecha] = { fecha: s.fecha, ms: 0, horas: 0, turnos: [] };
+      }
+      mapa[s.fecha].ms += s.ms;
+      mapa[s.fecha].horas += s.horas;
+      mapa[s.fecha].turnos.push(s);
+    }
+    return Object.values(mapa).sort((a,b) => a.fecha.localeCompare(b.fecha));
+  }
+
   function calcularHorasSinPagar(){
     const sesiones = calcularJornadas(historialServidor);
-    const fechaCorte = pagosServidor.reduce((max, p) => (p.hasta && p.hasta > max ? p.hasta : max), "");
-    const pendientes = fechaCorte ? sesiones.filter(s => s.fecha > fechaCorte) : sesiones;
+    const ultimoHasta = pagosServidor.reduce((max, p) => (p.hasta && p.hasta > max ? p.hasta : max), "");
+    const pendientes = ultimoHasta ? sesiones.filter(s => s.fecha > ultimoHasta) : sesiones;
     const totalHoras = pendientes.reduce((acc, s) => acc + s.horas, 0);
-    return { totalHoras, fechaCorte };
+    const desdeSiguiente = ultimoHasta ? addDaysStr(ultimoHasta, 1) : (pendientes.length ? pendientes[0].fecha : "");
+    return {
+      totalHoras,
+      ultimoHasta,
+      desdeSiguiente,
+      diasDetalle: agruparHorasPorDia(pendientes)
+    };
   }
 
   // ================= RENDER UI =================
   function tickClock(){
     const now = new Date();
-    document.getElementById("clockTime").textContent = now.toLocaleTimeString("es-AR", { hour12: false });
-    document.getElementById("clockDate").textContent = now.toLocaleDateString("es-AR", {
-      weekday: "long", day: "numeric", month: "long", year: "numeric"
-    });
+    const p = getPartsAR(now);
+    if(p){
+      document.getElementById("clockTime").textContent = `${p.hour}:${p.minute}:${p.second}`;
+      document.getElementById("clockDate").textContent = `${p.day}/${p.month}/${p.year.slice(-2)} · Hora Argentina (GMT-3)`;
+    }
   }
 
   function render(){
@@ -1371,14 +1458,14 @@
     } else if(estadoServidor.tipo === "INGRESO"){
       dot.className = "dot in";
       stText.textContent = "EN TURNO (Trabajando)";
-      stSub.textContent = `Ingresó el ${formatFechaAR(estadoServidor.timestamp)} a las ${formatHoraAR(estadoServidor.timestamp)}`;
+      stSub.textContent = `Ingreso: ${formatFechaHoraAR(estadoServidor.timestamp)} hs (Arg)`;
       btnIn.disabled = true;
       btnOut.disabled = registrando || !online || !habilitadoPorGps;
     } else {
       dot.className = "dot out";
       stText.textContent = "FUERA DE TURNO";
       stSub.textContent = estadoServidor.timestamp
-        ? `Último egreso: ${formatFechaAR(estadoServidor.timestamp)} a las ${formatHoraAR(estadoServidor.timestamp)}`
+        ? `Último egreso: ${formatFechaHoraAR(estadoServidor.timestamp)} hs (Arg)`
         : "Sin marcas previas registradas";
       btnIn.disabled = registrando || !online || !habilitadoPorGps;
       btnOut.disabled = true;
@@ -1434,7 +1521,7 @@
         <div class="marca-row">
           <div>
             <span class="${m.tipo === "INGRESO" ? "badge-in" : "badge-out"}">${m.tipo}</span>
-            <span style="margin-left:8px;font-weight:700;">${formatHoraAR(m.timestampRedondeado)}</span>
+            <span style="margin-left:8px;font-weight:700;font-variant-numeric:tabular-nums;">${formatFechaHoraAR(m.timestampRedondeado)}</span>
             ${esAdmin() && m.distanciaMetros !== null && m.distanciaMetros !== undefined
               ? `<span style="margin-left:6px;font-size:0.72rem;color:var(--muted);">(${m.distanciaMetros} m)</span>`
               : ""}
@@ -1451,7 +1538,7 @@
       return `
         <div class="day-group">
           <div class="day-head">
-            <span>${formatFechaAR(f + "T12:00:00")}</span>
+            <span>${formatFechaAR(f)}</span>
             <span style="color:var(--muted);">${totalDiaMs > 0 ? formatDuracion(totalDiaMs) : "En curso"}</span>
           </div>
           ${rowsHtml}
@@ -1473,24 +1560,41 @@
       return;
     }
 
-    cont.innerHTML = pagosServidor.map(p => `
-      <div class="pay-item">
-        <div class="pay-top">
-          <div>
-            <div style="font-weight:700;font-size:0.9rem;">Liquidación ${p.fechaPago}</div>
-            <div class="pay-meta">Período: ${p.desde || "Inicio"} al ${p.hasta} · ${p.horas.toFixed(2)} hs × ${formatMoney(p.tarifa)}</div>
-            ${p.notas ? `<div class="pay-meta">Nota: ${p.notas}</div>` : ""}
+    const todasSesiones = calcularJornadas(historialServidor);
+
+    cont.innerHTML = pagosServidor.map(p => {
+      const sesPeriodo = todasSesiones.filter(s => (!p.desde || s.fecha >= p.desde) && (!p.hasta || s.fecha <= p.hasta));
+      const diasPeriodo = agruparHorasPorDia(sesPeriodo);
+      const detalleDiasHtml = diasPeriodo.length
+        ? `<div style="margin-top:8px;padding-top:6px;border-top:1px dashed rgba(51,65,85,0.7);font-size:0.75rem;color:var(--muted);">
+             <div style="font-weight:700;margin-bottom:3px;color:var(--text);">Detalle por día trabajado (${diasPeriodo.length} ${diasPeriodo.length === 1 ? "día" : "días"}):</div>
+             ${diasPeriodo.map(d => `<div style="display:flex;justify-content:space-between;padding:1px 0;">
+               <span>${formatFechaAR(d.fecha)}</span>
+               <span>${formatDuracion(d.ms)} (${d.horas.toFixed(2)} h)</span>
+             </div>`).join("")}
+           </div>`
+        : "";
+
+      return `
+        <div class="pay-item">
+          <div class="pay-top">
+            <div>
+              <div style="font-weight:700;font-size:0.9rem;">Liquidación ${formatFechaAR(p.fechaPago)}</div>
+              <div class="pay-meta">Período: ${p.desde ? formatFechaAR(p.desde) : "Inicio"} al ${formatFechaAR(p.hasta)} · ${p.horas.toFixed(2)} hs × ${formatMoney(p.tarifa)}</div>
+              ${p.notas ? `<div class="pay-meta">Nota: ${p.notas}</div>` : ""}
+            </div>
+            <div class="pay-amount">${formatMoney(p.monto)}</div>
           </div>
-          <div class="pay-amount">${formatMoney(p.monto)}</div>
+          ${detalleDiasHtml}
+          ${esAdmin() ? `
+            <div class="pay-actions">
+              <button class="btn-secondary btn-sm" data-pay-pdf="${p.id}">Recibo PDF</button>
+              <button class="btn-danger-ghost btn-sm" data-pay-del="${p.id}">Eliminar</button>
+            </div>
+          ` : ""}
         </div>
-        ${esAdmin() ? `
-          <div class="pay-actions">
-            <button class="btn-secondary btn-sm" data-pay-pdf="${p.id}">Recibo PDF</button>
-            <button class="btn-danger-ghost btn-sm" data-pay-del="${p.id}">Eliminar</button>
-          </div>
-        ` : ""}
-      </div>
-    `).join("");
+      `;
+    }).join("");
   }
 
   // ================= ADMIN: CONFIGURAR GPS DEL LOCAL =================
@@ -1547,7 +1651,8 @@
     const tipo = document.getElementById("manualTipo").value;
     const fecha = document.getElementById("manualFecha").value;
     const hora = document.getElementById("manualHora").value;
-    const dt = new Date(`${fecha}T${hora}:00`);
+    // Se construye explícitamente en horario Argentina (-03:00)
+    const dt = new Date(`${fecha}T${hora}:00-03:00`);
     if(isNaN(dt)){ showToast("Fecha u hora inválida.", "error"); return; }
 
     const dtRedondeado = redondear15Min(dt);
@@ -1563,7 +1668,7 @@
           })
           .eq("id", id);
         if(error) throw error;
-        showToast(`Marca actualizada (${formatHoraAR(dtRedondeado)}).`, "success");
+        showToast(`Marca actualizada (${formatFechaHoraAR(dtRedondeado)}).`, "success");
       } else {
         const newId = "man_" + Date.now();
         const { error } = await sb
@@ -1576,7 +1681,7 @@
             timestamp_redondeado: dtRedondeado.toISOString()
           });
         if(error) throw error;
-        showToast(`Marca manual agregada (${formatHoraAR(dtRedondeado)}).`, "success");
+        showToast(`Marca manual agregada (${formatFechaHoraAR(dtRedondeado)}).`, "success");
       }
       document.getElementById("manualModalOverlay").classList.remove("open");
       await Promise.all([actualizarEstadoDesdeServidor(true), actualizarHistorialDesdeServidor(true)]);
@@ -1598,19 +1703,56 @@
     }
   }
 
-  // ================= ADMIN: PAGOS Y RECIBO PDF =================
+  // ================= ADMIN: PAGOS Y RECIBO PDF CON DETALLE POR DÍA =================
+  function actualizarPreviewLiquidacionModal(){
+    const desde = document.getElementById("payDesde").value;
+    const hasta = document.getElementById("payHasta").value;
+    const emp = getEmpleadoActivo();
+    const tarifa = Number(document.getElementById("payTarifa").value) || (emp && emp.valor_hora_default ? Number(emp.valor_hora_default) : 0);
+
+    const sesiones = calcularJornadas(historialServidor).filter(s => {
+      if(desde && s.fecha < desde) return false;
+      if(hasta && s.fecha > hasta) return false;
+      return true;
+    });
+    const dias = agruparHorasPorDia(sesiones);
+    const totalHoras = sesiones.reduce((acc, s) => acc + s.horas, 0);
+
+    document.getElementById("payHoras").value = totalHoras.toFixed(2);
+    document.getElementById("payMonto").value = (totalHoras * tarifa).toFixed(2);
+
+    const box = document.getElementById("payPreviewDias");
+    if(!dias.length){
+      box.innerHTML = `<div style="color:var(--muted);text-align:center;">Sin días trabajados pendientes en el rango seleccionado.</div>`;
+    } else {
+      box.innerHTML = `
+        <div style="font-weight:700;margin-bottom:6px;color:var(--text);">
+          Días trabajados a liquidar (${dias.length} ${dias.length === 1 ? "día" : "días"} — ${totalHoras.toFixed(2)} hs):
+        </div>
+        ${dias.map(d => `
+          <div class="pay-detail-row">
+            <span>${formatFechaAR(d.fecha)}</span>
+            <span style="font-weight:700;">${formatDuracion(d.ms)} (${d.horas.toFixed(2)} h)</span>
+          </div>
+        `).join("")}
+      `;
+    }
+  }
+
   function abrirModalPago(){
     if(!esAdmin()) return;
-    const { totalHoras, fechaCorte } = calcularHorasSinPagar();
+    const { ultimoHasta, desdeSiguiente } = calcularHorasSinPagar();
     const emp = getEmpleadoActivo();
     const tarifaDef = emp && emp.valor_hora_default ? Number(emp.valor_hora_default) : 0;
 
-    document.getElementById("payDesde").value = fechaCorte || "";
+    document.getElementById("payDesde").value = desdeSiguiente || "";
     document.getElementById("payHasta").value = toLocalDateStr(new Date());
-    document.getElementById("payHoras").value = totalHoras.toFixed(2);
     document.getElementById("payTarifa").value = tarifaDef || "";
-    document.getElementById("payMonto").value = (totalHoras * tarifaDef).toFixed(2);
-    document.getElementById("payNotas").value = "";
+    document.getElementById("payNotas").value = ultimoHasta
+      ? `Posterior al pago del ${formatFechaAR(ultimoHasta)}`
+      : "";
+
+    actualizarPreviewLiquidacionModal();
     document.getElementById("payModalOverlay").classList.add("open");
   }
 
@@ -1626,6 +1768,7 @@
 
     try{
       const { error } = await sb.from("pagos").insert({
+        id: "pago_" + Date.now(),
         empleado_id: selectedEmpleadoId,
         fecha_pago: toLocalDateStr(new Date()),
         desde,
@@ -1662,34 +1805,74 @@
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     const emp = getEmpleadoActivo();
+    const todasSesiones = calcularJornadas(historialServidor);
+    const sesPeriodo = todasSesiones.filter(s => (!p.desde || s.fecha >= p.desde) && (!p.hasta || s.fecha <= p.hasta));
+    const diasPeriodo = agruparHorasPorDia(sesPeriodo);
+
     doc.setFontSize(16);
-    doc.text(NEGOCIO_NOMBRE, 20, 22);
+    doc.text(NEGOCIO_NOMBRE, 20, 20);
     doc.setFontSize(12);
-    doc.text("Comprobante de Liquidación de Horas", 20, 31);
-    doc.line(20, 35, 190, 35);
+    doc.text("Comprobante de Liquidación de Horas", 20, 28);
+    doc.line(20, 32, 190, 32);
 
     doc.setFontSize(10);
-    doc.text(`Empleado: ${emp ? emp.nombre : "-"}`, 20, 45);
-    doc.text(`Fecha de emisión: ${p.fechaPago}`, 20, 52);
-    doc.text(`Período liquidado: ${p.desde || "Inicio"} al ${p.hasta}`, 20, 59);
-    doc.text(`Horas liquidadas: ${p.horas.toFixed(2)} hs`, 20, 66);
-    doc.text(`Valor por hora: ${formatMoney(p.tarifa)}`, 20, 73);
+    doc.text(`Empleado: ${emp ? emp.nombre : "-"}`, 20, 41);
+    doc.text(`Fecha de emisión: ${formatFechaAR(p.fechaPago)}`, 20, 48);
+    doc.text(`Período liquidado: ${p.desde ? formatFechaAR(p.desde) : "Inicio"} al ${formatFechaAR(p.hasta)}`, 20, 55);
+    doc.text(`Días trabajados: ${diasPeriodo.length} | Horas liquidadas: ${p.horas.toFixed(2)} hs`, 20, 62);
+    doc.text(`Valor por hora: ${formatMoney(p.tarifa)}`, 20, 69);
     doc.setFontSize(13);
-    doc.text(`Total abonado: ${formatMoney(p.monto)}`, 20, 84);
+    doc.text(`Total abonado: ${formatMoney(p.monto)}`, 20, 79);
+
+    let y = 89;
     if(p.notas){
-      doc.setFontSize(10);
-      doc.text(`Observaciones: ${p.notas}`, 20, 94);
+      doc.setFontSize(9.5);
+      doc.text(`Observaciones: ${p.notas}`, 20, y);
+      y += 9;
     }
-    doc.line(20, 125, 90, 125);
+
+    if(diasPeriodo.length){
+      doc.setFontSize(10);
+      doc.text("Detalle de días y horas trabajadas:", 20, y);
+      y += 5;
+      doc.line(20, y, 190, y);
+      y += 6;
+      doc.setFontSize(9);
+      doc.text("Día", 22, y);
+      doc.text("Turnos (Ingreso - Egreso)", 65, y);
+      doc.text("Horas del día", 150, y);
+      y += 3;
+      doc.line(20, y, 190, y);
+      y += 6;
+
+      for(const d of diasPeriodo){
+        if(y > 255){ doc.addPage(); y = 20; }
+        const turnosStr = d.turnos.map(t => `${formatHoraAR(t.inicio)}-${formatHoraAR(t.fin)}`).join(" / ");
+        doc.text(formatFechaAR(d.fecha), 22, y);
+        doc.text(turnosStr, 65, y);
+        doc.text(`${formatDuracion(d.ms)} (${d.horas.toFixed(2)} h)`, 150, y);
+        y += 6;
+      }
+      doc.line(20, y, 190, y);
+      y += 7;
+      doc.setFontSize(10);
+      doc.text(`Total días: ${diasPeriodo.length}   |   Total horas liquidadas: ${p.horas.toFixed(2)} hs`, 22, y);
+      y += 18;
+    } else {
+      y += 16;
+    }
+
+    if(y > 265){ doc.addPage(); y = 35; }
+    doc.line(20, y, 90, y);
     doc.setFontSize(9);
-    doc.text("Firma Empleador", 20, 130);
-    doc.line(115, 125, 185, 125);
-    doc.text("Firma Empleado", 115, 130);
+    doc.text("Firma Empleador", 20, y + 5);
+    doc.line(115, y, 185, y);
+    doc.text("Firma Empleado", 115, y + 5);
 
     doc.save(`Recibo_${(emp ? emp.nombre : "Empleado").replace(/\s+/g,"_")}_${p.fechaPago}.pdf`);
   }
 
-  // ================= REPORTES CSV / PDF (SOLO ADMIN) =================
+  // ================= REPORTES CSV / PDF COMPLETOS (SOLO ADMIN) =================
   function getRangoReporteFechas(){
     const hoy = new Date();
     const hasta = toLocalDateStr(hoy);
@@ -1709,25 +1892,106 @@
     };
   }
 
+  // Genera filas detalladas de movimientos del período (día, tipo de movimiento, hora ingreso, hora egreso, horas)
+  function obtenerDetalleReporteCompleto(desde, hasta){
+    const marcasRango = historialServidor
+      .filter(m => {
+        const f = toLocalDateStr(m.timestampRedondeado);
+        return f >= desde && f <= hasta;
+      })
+      .sort((a,b) => new Date(a.timestampRedondeado) - new Date(b.timestampRedondeado));
+
+    const filas = [];
+    let ingresoPendiente = null;
+    let totalMs = 0;
+
+    for(const m of marcasRango){
+      const diaStr = formatFechaAR(m.timestampRedondeado);
+      const horaStr = formatHoraAR(m.timestampRedondeado);
+
+      if(m.tipo === "INGRESO"){
+        // Si quedó un ingreso anterior sin cerrar, lo registramos como movimiento abierto
+        if(ingresoPendiente){
+          filas.push({
+            dia: formatFechaAR(ingresoPendiente.timestampRedondeado),
+            tipoMovimiento: "INGRESO (Sin egreso)",
+            horaIngreso: formatHoraAR(ingresoPendiente.timestampRedondeado),
+            horaEgreso: "-",
+            ms: 0,
+            horas: 0
+          });
+        }
+        ingresoPendiente = m;
+      } else if(m.tipo === "EGRESO"){
+        if(ingresoPendiente){
+          const ini = new Date(ingresoPendiente.timestampRedondeado);
+          const fin = new Date(m.timestampRedondeado);
+          const ms = Math.max(0, fin - ini);
+          totalMs += ms;
+          filas.push({
+            dia: formatFechaAR(ini),
+            tipoMovimiento: "INGRESO / EGRESO",
+            horaIngreso: formatHoraAR(ini),
+            horaEgreso: formatHoraAR(fin),
+            ms,
+            horas: ms / 3600000
+          });
+          ingresoPendiente = null;
+        } else {
+          filas.push({
+            dia: diaStr,
+            tipoMovimiento: "EGRESO (Sin ingreso)",
+            horaIngreso: "-",
+            horaEgreso: horaStr,
+            ms: 0,
+            horas: 0
+          });
+        }
+      }
+    }
+
+    if(ingresoPendiente){
+      filas.push({
+        dia: formatFechaAR(ingresoPendiente.timestampRedondeado),
+        tipoMovimiento: "INGRESO (En curso)",
+        horaIngreso: formatHoraAR(ingresoPendiente.timestampRedondeado),
+        horaEgreso: "-",
+        ms: 0,
+        horas: 0
+      });
+    }
+
+    return { filas, totalMs, totalHoras: totalMs / 3600000 };
+  }
+
   function actualizarPreviewReporte(){
     if(!esAdmin()) return;
     const { desde, hasta } = getRangoReporteFechas();
-    const sesiones = calcularJornadas(historialServidor).filter(s => s.fecha >= desde && s.fecha <= hasta);
-    const totalHoras = sesiones.reduce((a,b) => a + b.horas, 0);
+    const { filas, totalMs, totalHoras } = obtenerDetalleReporteCompleto(desde, hasta);
     document.getElementById("reportPreviewText").textContent =
-      `Período ${desde} al ${hasta}: ${sesiones.length} turnos completos (${totalHoras.toFixed(2)} hs).`;
+      `Período ${formatFechaAR(desde)} al ${formatFechaAR(hasta)}: ${filas.length} movimientos — Total: ${formatDuracion(totalMs)} (${totalHoras.toFixed(2)} hs).`;
   }
 
   function descargarReporteCSV(){
     if(!esAdmin()) return;
     const { desde, hasta } = getRangoReporteFechas();
     const emp = getEmpleadoActivo();
-    const sesiones = calcularJornadas(historialServidor).filter(s => s.fecha >= desde && s.fecha <= hasta);
-    const filas = [["Empleado", "Fecha", "Ingreso", "Egreso", "Horas"]];
-    for(const s of sesiones){
-      filas.push([emp ? emp.nombre : "", s.fecha, formatHoraAR(s.inicio), formatHoraAR(s.fin), s.horas.toFixed(2)]);
+    const { filas, totalMs, totalHoras } = obtenerDetalleReporteCompleto(desde, hasta);
+
+    const csvRows = [["Empleado", "Día", "Tipo de movimiento", "Hora ingreso", "Hora egreso", "Horas"]];
+    for(const f of filas){
+      csvRows.push([
+        emp ? emp.nombre : "",
+        f.dia,
+        f.tipoMovimiento,
+        f.horaIngreso,
+        f.horaEgreso,
+        f.horas.toFixed(2)
+      ]);
     }
-    const csv = filas.map(r => r.join(";")).join("\n");
+    csvRows.push(["", "", "", "", "TOTAL HORAS:", `${totalHoras.toFixed(2)} (${formatDuracion(totalMs)})`]);
+
+    const csv = csvRows.map(r => r.join(";")).join("\n");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -1741,32 +2005,39 @@
     const doc = new jsPDF();
     const { desde, hasta } = getRangoReporteFechas();
     const emp = getEmpleadoActivo();
-    const sesiones = calcularJornadas(historialServidor).filter(s => s.fecha >= desde && s.fecha <= hasta);
-    const totalHoras = sesiones.reduce((a,b) => a + b.horas, 0);
+    const { filas, totalMs, totalHoras } = obtenerDetalleReporteCompleto(desde, hasta);
 
     doc.setFontSize(15);
-    doc.text(`${NEGOCIO_NOMBRE} — Reporte de Horas`, 16, 18);
+    doc.text(`${NEGOCIO_NOMBRE} — Reporte Detallado de Horas`, 14, 18);
     doc.setFontSize(10);
-    doc.text(`Empleado: ${emp ? emp.nombre : "-"} | Período: ${desde} al ${hasta}`, 16, 26);
-    doc.text(`Total acumulado: ${totalHoras.toFixed(2)} horas`, 16, 32);
+    doc.text(`Empleado: ${emp ? emp.nombre : "-"}`, 14, 26);
+    doc.text(`Período: ${formatFechaAR(desde)} al ${formatFechaAR(hasta)} (Horario Argentina)`, 14, 32);
 
     let y = 42;
     doc.setFontSize(9);
-    doc.text("Fecha", 16, y);
-    doc.text("Ingreso", 60, y);
-    doc.text("Egreso", 95, y);
-    doc.text("Horas", 135, y);
-    doc.line(16, y+2, 180, y+2);
+    doc.text("Día", 14, y);
+    doc.text("Tipo de movimiento", 42, y);
+    doc.text("Hora ingreso", 98, y);
+    doc.text("Hora egreso", 132, y);
+    doc.text("Horas", 168, y);
+    doc.line(14, y + 2, 195, y + 2);
     y += 8;
 
-    for(const s of sesiones){
-      if(y > 275){ doc.addPage(); y = 20; }
-      doc.text(s.fecha, 16, y);
-      doc.text(formatHoraAR(s.inicio), 60, y);
-      doc.text(formatHoraAR(s.fin), 95, y);
-      doc.text(s.horas.toFixed(2) + " h", 135, y);
-      y += 6;
+    for(const f of filas){
+      if(y > 270){ doc.addPage(); y = 20; }
+      doc.text(f.dia, 14, y);
+      doc.text(f.tipoMovimiento, 42, y);
+      doc.text(f.horaIngreso, 98, y);
+      doc.text(f.horaEgreso, 132, y);
+      doc.text(f.ms > 0 ? `${f.horas.toFixed(2)} h` : "-", 168, y);
+      y += 6.5;
     }
+
+    if(y > 268){ doc.addPage(); y = 24; }
+    doc.line(14, y, 195, y);
+    y += 8;
+    doc.setFontSize(11);
+    doc.text(`CANTIDAD TOTAL DE HORAS DEL REPORTE: ${formatDuracion(totalMs)} (${totalHoras.toFixed(2)} hs)`, 14, y);
 
     doc.save(`Reporte_${(emp ? emp.nombre : "Empleado").replace(/\s+/g,"_")}_${desde}.pdf`);
   }
@@ -1861,6 +2132,9 @@
   document.getElementById("btnCerrarPay").addEventListener("click", () => {
     document.getElementById("payModalOverlay").classList.remove("open");
   });
+  ["payDesde", "payHasta"].forEach(id => {
+    document.getElementById(id).addEventListener("change", actualizarPreviewLiquidacionModal);
+  });
   ["payHoras", "payTarifa"].forEach(id => {
     document.getElementById(id).addEventListener("input", () => {
       const h = Number(document.getElementById("payHoras").value) || 0;
@@ -1934,7 +2208,7 @@
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js?v=7").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=8").catch(() => {});
   });
 }
 </script>
