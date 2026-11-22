@@ -1,4 +1,4 @@
-const CACHE_NAME = "control-horas-v6";
+const CACHE_NAME = "control-horas-v7";
 const ASSETS = ["./", "./index.html", "./manifest.json"];
 
 self.addEventListener("install", (event) => {

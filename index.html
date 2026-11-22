@@ -1182,11 +1182,12 @@
         .limit(1);
       if(error) throw error;
       const ultima = data && data[0];
+      const baseTs = ultima ? (ultima.timestamp_redondeado || ultima.timestamp_real) : null;
       estadoServidor = {
         cargado: true,
         error: false,
         tipo: ultima ? ultima.tipo : null,
-        timestamp: ultima ? (ultima.timestamp_redondeado || ultima.timestamp_real) : null
+        timestamp: baseTs ? redondear15Min(baseTs).toISOString() : null
       };
     }catch(err){
       console.warn("Error estado:", err);
@@ -1205,13 +1206,16 @@
         .eq("empleado_id", selectedEmpleadoId)
         .order("timestamp_real", { ascending: true });
       if(error) throw error;
-      historialServidor = (data || []).map(r => ({
-        id: r.id,
-        tipo: r.tipo,
-        timestampReal: r.timestamp_real,
-        timestampRedondeado: r.timestamp_redondeado || r.timestamp_real,
-        distanciaMetros: r.distancia_metros
-      }));
+      historialServidor = (data || []).map(r => {
+        const baseTs = r.timestamp_redondeado || r.timestamp_real;
+        return {
+          id: r.id,
+          tipo: r.tipo,
+          timestampReal: r.timestamp_real,
+          timestampRedondeado: redondear15Min(baseTs).toISOString(),
+          distanciaMetros: r.distancia_metros
+        };
+      });
     }catch(err){
       console.warn("Error historial:", err);
       if(!silencioso) showToast("No se pudo cargar el historial.", "warning");
@@ -1546,14 +1550,20 @@
     const dt = new Date(`${fecha}T${hora}:00`);
     if(isNaN(dt)){ showToast("Fecha u hora inválida.", "error"); return; }
 
+    const dtRedondeado = redondear15Min(dt);
+
     try{
       if(id){
         const { error } = await sb
           .from("marcas")
-          .update({ tipo, timestamp_real: dt.toISOString(), timestamp_redondeado: dt.toISOString() })
+          .update({
+            tipo,
+            timestamp_real: dt.toISOString(),
+            timestamp_redondeado: dtRedondeado.toISOString()
+          })
           .eq("id", id);
         if(error) throw error;
-        showToast("Marca actualizada.", "success");
+        showToast(`Marca actualizada (${formatHoraAR(dtRedondeado)}).`, "success");
       } else {
         const newId = "man_" + Date.now();
         const { error } = await sb
@@ -1563,10 +1573,10 @@
             empleado_id: selectedEmpleadoId,
             tipo,
             timestamp_real: dt.toISOString(),
-            timestamp_redondeado: dt.toISOString()
+            timestamp_redondeado: dtRedondeado.toISOString()
           });
         if(error) throw error;
-        showToast("Marca manual agregada.", "success");
+        showToast(`Marca manual agregada (${formatHoraAR(dtRedondeado)}).`, "success");
       }
       document.getElementById("manualModalOverlay").classList.remove("open");
       await Promise.all([actualizarEstadoDesdeServidor(true), actualizarHistorialDesdeServidor(true)]);
@@ -1924,7 +1934,7 @@
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js?v=6").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=7").catch(() => {});
   });
 }
 </script>
