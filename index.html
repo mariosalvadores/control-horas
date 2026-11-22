@@ -1566,13 +1566,17 @@
       const sesPeriodo = todasSesiones.filter(s => (!p.desde || s.fecha >= p.desde) && (!p.hasta || s.fecha <= p.hasta));
       const diasPeriodo = agruparHorasPorDia(sesPeriodo);
       const detalleDiasHtml = diasPeriodo.length
-        ? `<div style="margin-top:8px;padding-top:6px;border-top:1px dashed rgba(51,65,85,0.7);font-size:0.75rem;color:var(--muted);">
-             <div style="font-weight:700;margin-bottom:3px;color:var(--text);">Detalle por día trabajado (${diasPeriodo.length} ${diasPeriodo.length === 1 ? "día" : "días"}):</div>
-             ${diasPeriodo.map(d => `<div style="display:flex;justify-content:space-between;padding:1px 0;">
-               <span>${formatFechaAR(d.fecha)}</span>
-               <span>${formatDuracion(d.ms)} (${d.horas.toFixed(2)} h)</span>
-             </div>`).join("")}
-           </div>`
+        ? `<details style="margin-top:8px;padding-top:6px;border-top:1px dashed rgba(51,65,85,0.7);font-size:0.76rem;color:var(--muted);">
+             <summary style="cursor:pointer;font-weight:700;color:#93c5fd;user-select:none;padding:2px 0;">
+               Ver detalle por día trabajado (${diasPeriodo.length} ${diasPeriodo.length === 1 ? "día" : "días"}) ▾
+             </summary>
+             <div style="margin-top:6px;padding:6px 8px;background:rgba(15,23,42,0.55);border-radius:8px;">
+               ${diasPeriodo.map(d => `<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid rgba(51,65,85,0.35);">
+                 <span>${formatFechaAR(d.fecha)}</span>
+                 <span style="color:var(--text);font-weight:600;">${formatDuracion(d.ms)}</span>
+               </div>`).join("")}
+             </div>
+           </details>`
         : "";
 
       return `
@@ -1726,15 +1730,19 @@
       box.innerHTML = `<div style="color:var(--muted);text-align:center;">Sin días trabajados pendientes en el rango seleccionado.</div>`;
     } else {
       box.innerHTML = `
-        <div style="font-weight:700;margin-bottom:6px;color:var(--text);">
-          Días trabajados a liquidar (${dias.length} ${dias.length === 1 ? "día" : "días"} — ${totalHoras.toFixed(2)} hs):
-        </div>
-        ${dias.map(d => `
-          <div class="pay-detail-row">
-            <span>${formatFechaAR(d.fecha)}</span>
-            <span style="font-weight:700;">${formatDuracion(d.ms)} (${d.horas.toFixed(2)} h)</span>
+        <details>
+          <summary style="cursor:pointer;font-weight:700;color:#93c5fd;user-select:none;">
+            Ver días trabajados a liquidar (${dias.length} ${dias.length === 1 ? "día" : "días"} — ${totalHoras.toFixed(2)} hs) ▾
+          </summary>
+          <div style="margin-top:6px;">
+            ${dias.map(d => `
+              <div class="pay-detail-row">
+                <span>${formatFechaAR(d.fecha)}</span>
+                <span style="font-weight:700;">${formatDuracion(d.ms)}</span>
+              </div>
+            `).join("")}
           </div>
-        `).join("")}
+        </details>
       `;
     }
   }
@@ -1846,28 +1854,18 @@
       y += 6;
 
       for(const d of diasPeriodo){
-        if(y > 255){ doc.addPage(); y = 20; }
+        if(y > 270){ doc.addPage(); y = 20; }
         const turnosStr = d.turnos.map(t => `${formatHoraAR(t.inicio)}-${formatHoraAR(t.fin)}`).join(" / ");
         doc.text(formatFechaAR(d.fecha), 22, y);
         doc.text(turnosStr, 65, y);
-        doc.text(`${formatDuracion(d.ms)} (${d.horas.toFixed(2)} h)`, 150, y);
+        doc.text(formatDuracion(d.ms), 150, y);
         y += 6;
       }
       doc.line(20, y, 190, y);
       y += 7;
       doc.setFontSize(10);
       doc.text(`Total días: ${diasPeriodo.length}   |   Total horas liquidadas: ${p.horas.toFixed(2)} hs`, 22, y);
-      y += 18;
-    } else {
-      y += 16;
     }
-
-    if(y > 265){ doc.addPage(); y = 35; }
-    doc.line(20, y, 90, y);
-    doc.setFontSize(9);
-    doc.text("Firma Empleador", 20, y + 5);
-    doc.line(115, y, 185, y);
-    doc.text("Firma Empleado", 115, y + 5);
 
     doc.save(`Recibo_${(emp ? emp.nombre : "Empleado").replace(/\s+/g,"_")}_${p.fechaPago}.pdf`);
   }
@@ -2208,7 +2206,7 @@
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js?v=8").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=9").catch(() => {});
   });
 }
 </script>
